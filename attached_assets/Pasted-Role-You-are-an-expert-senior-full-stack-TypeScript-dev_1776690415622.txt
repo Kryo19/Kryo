@@ -1,0 +1,83 @@
+Role
+You are an expert senior full-stack TypeScript developer with 12+ years of experience building pixel-perfect SaaS dashboards and cold-chain / logistics platforms. You specialize in Next.js, Tailwind, shadcn/ui, and Prisma. You always produce clean, modular, well-commented, production-ready code.
+Context
+Build a complete, fully functional web application called KRYO — AI-Native Cold Chain Intelligence that replicates exactly the UI/UX, colors, spacing, fonts, icons, layout, hover states, live indicators, and animations from the 4 screenshots I have uploaded.
+The product is a molecular surveillance platform for pharmaceutical cold chains and perishable cargo (FT-NIR spectroscopy + predictive AI).
+Key pages and features to implement (match screenshots 100%):
+
+Landing / Marketing Page (“AI-Native Cold Chain Intelligence”) – hero title, subtitle, stats (12K+ sensors, 98.7% compliance, $45M cargo, 24/7), buttons “Start Free Trial” and “View Demo”, certifications, right-side live demo card with TEMP 2.4°C, ETHYLENE 8 PPM, SHELF LIFE 14d 6h, HUMIDITY 65%.
+Fleet Command Center Dashboard – top stats cards (847 UNITS, 2.4°C, 3 EVENTS, 98.7% SYSTEM HEALTH), Fleet Telemetry chart (Last 24 Hours – Temperature green, Humidity cyan, Ethylene orange line), right sidebar Event Feed (real-time looking entries), bottom Active Shipments table.
+Sensor Inspect Mode (for unit KRY-2847-PHR) – container cross-section diagram with sensor dots (T1, T2, E1, C1, A1, H1), FT-NIR spectroscopy bar chart (Ripeness 84%, Sugar Brix 12.4°, Quality Index A+), Ethylene Gas Detection bar (8 PPM, threshold 12 PPM), CO2 Concentration circular gauge (0.42%).
+Chain-of-Custody Certificate – clean white page with shipment details (KRY-2847-PHR, Moderna COVID-19 Vaccines, Mumbai → Delhi), COMPLIANT banner, timestamped sensor log table, buttons “Download PDF” and “Verify on Blockchain” (mock success toast).
+
+Additional requirements:
+
+Full admin controls with login (username: admin, password: kryo2026) that gives complete read/write access to all data.
+Admin panel (accessible after login) to CRUD shipments, sensor logs, generate new certificates, and manually add/edit live data.
+All data persisted in SQLite via Prisma.
+Simulated live updates (telemetry, event feed, gauges) using setInterval so it feels real-time.
+Dark theme with exact neon-green accents (#22ff99 / #00ff9f) from the screenshots.
+Responsive (mobile + desktop).
+SEO-friendly landing page.
+
+Exact Tech Stack You MUST use (do not deviate):
+
+Next.js 15 (App Router) + TypeScript
+Tailwind CSS + shadcn/ui (install and use components)
+lucide-react for icons
+Recharts for all charts and gauges
+Prisma + SQLite (file-based)
+@react-pdf/renderer for PDF certificates
+Auth.js (NextAuth) with Credentials provider
+TanStack React Query for data
+Server Actions for mutations
+
+Stepwise Breakdown – Follow in this exact order
+
+Project Initialization
+Create a new Next.js 15 App Router project with TypeScript, Tailwind, and shadcn/ui. Install all required dependencies (Prisma, @prisma/client, @react-pdf/renderer, lucide-react, recharts, @tanstack/react-query, next-auth, etc.). Initialize Prisma with SQLite. Provide the exact package.json and prisma/schema.prisma you create.
+Database Schema
+Design and migrate a clean Prisma schema that can support Shipments, SensorLogs, Events, Users (for admin), and Certificates. Seed initial data that exactly matches the screenshots (KRY-2847-PHR shipment, sensor readings, etc.).
+Authentication
+Implement Auth.js with a simple Credentials login page. Protect all admin routes. After login, show a top-right “Admin” badge and unlock full CRUD.
+Routing & Layout
+Create the folder structure:
+/ → Landing page
+/dashboard → Fleet Command Center
+/inspect/[id] → Sensor Inspect Mode
+/certificate/[id] → Chain-of-Custody page
+/admin → Admin CRUD panel
+Use a shared dark layout with top navbar (KRYO logo + Mission Control + tabs).
+
+Build Pages One-by-One (exact visual match)
+Implement each page listed in Context above. Use shadcn/ui cards, tables, and custom Tailwind classes to match the screenshots pixel-for-pixel. Make the telemetry chart, FT-NIR bars, ethylene slider, and CO2 gauge interactive and live-updating.
+Admin Controls
+Build a full admin dashboard (sidebar or separate page) with:
+List/add/edit/delete shipments
+Add manual sensor readings
+Generate new certificates
+Export all data as JSON
+Simple “Simulate Live Data” button
+
+Interactivity & Polish
+Live updating telemetry & event feed (every 8–12 seconds)
+Clickable “Inspect” and “Certificate” buttons in tables
+Download PDF certificate (server-generated)
+“Verify on Blockchain” button → beautiful success animation + toast
+Hover effects, live indicators (green dots), exact fonts/spacing
+
+Final Deliverables
+After building, output:
+Full project structure tree
+Complete, copy-pasteable code (split into logical files)
+README.md with:
+• How to run locally (npm run dev)
+• How to open in VS Code
+• How to deploy to Vercel for free (step-by-step)
+• Login credentials
+• How to add your own data
+• How to customize further
+
+
+Do not use any external APIs or paid services. Everything must be self-contained and work offline after npm install.
+Start building now — begin with Step 1 and show me each step’s code before moving to the next. Use the uploaded screenshots as the single source of truth for every visual detail.
