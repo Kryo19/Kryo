@@ -1,274 +1,109 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  Activity,
-  AlertTriangle,
-  Box,
-  CheckCircle2,
-  ChevronRight,
-  CircuitBoard,
-  ClipboardCheck,
-  Cpu,
-  Database,
-  Download,
-  Gauge,
-  Home,
-  LayoutDashboard,
-  Lock,
-  LogOut,
-  PackageCheck,
-  Plus,
-  Radar,
-  RadioTower,
-  Save,
-  ShieldCheck,
-  Sparkles,
-  Thermometer,
-  Trash2,
-  User,
-  Waves,
+  Activity, AlertTriangle, Box, CheckCircle2, ChevronRight,
+  ClipboardCheck, Gauge, Home, LayoutDashboard, Lock, LogOut,
+  RadioTower, ShieldCheck, Sparkles, Thermometer, User, Waves,
 } from "lucide-react";
 import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  PolarAngleAxis,
-  RadialBar,
-  RadialBarChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+  Area, AreaChart, CartesianGrid, Line, LineChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 
-type Shipment = {
-  unitId: string;
-  cargo: string;
-  origin: string;
-  destination: string;
-  route: string;
-  status: string;
-  temp: number;
-  humidity: number;
-  ethylene: number;
-  co2: number;
-  eta: string;
-  health: number;
-  departure: string;
-  arrival: string;
-  duration: string;
-  compliance: string;
-};
-
-type SensorLog = {
-  id: string;
-  shipmentId: string;
-  timestamp: string;
-  parameter: string;
-  value: string;
-  sensorId: string;
-  status: string;
-};
-
-type EventItem = {
-  id: string;
-  time: string;
-  severity: "safe" | "warn" | "danger";
-  message: string;
-};
-
-type Certificate = {
-  id: string;
-  shipmentId: string;
-  certificateId: string;
-  issuedAt: string;
-  notes: string;
-};
-
-type TelemetryPoint = {
-  time: string;
-  temperature: number;
-  humidity: number;
-  ethylene: number;
-};
-
-type AppData = {
-  shipments: Shipment[];
-  sensorLogs: SensorLog[];
-  events: EventItem[];
-  certificates: Certificate[];
-  telemetry: TelemetryPoint[];
-};
-
+const API = "http://localhost:3000/api";
 const queryClient = new QueryClient();
 
-const seedData: AppData = {
-  shipments: [
-    {
-      unitId: "KRY-2847-PHR",
-      cargo: "Moderna COVID-19 Vaccines",
-      origin: "Mumbai Central Facility",
-      destination: "Delhi Medical District",
-      route: "Mumbai → Delhi",
-      status: "Compliant",
-      temp: 2.4,
-      humidity: 65,
-      ethylene: 8,
-      co2: 0.42,
-      eta: "6h 15m",
-      health: 98.7,
-      departure: "2026-04-13 08:30:00 UTC",
-      arrival: "2026-04-13 14:45:00 UTC",
-      duration: "6h 15m",
-      compliance: "All environmental parameters remained within acceptable ranges throughout transport. No temperature excursions detected. WHO PQS standards maintained.",
-    },
-    {
-      unitId: "KRY-3145-BIO",
-      cargo: "Biologic Reagents",
-      origin: "Pune Lab Cluster",
-      destination: "Hyderabad Research Park",
-      route: "Pune → Hyderabad",
-      status: "Alert",
-      temp: 4.8,
-      humidity: 71,
-      ethylene: 5,
-      co2: 0.38,
-      eta: "2h 40m",
-      health: 91.2,
-      departure: "2026-04-20 06:10:00 UTC",
-      arrival: "2026-04-20 18:20:00 UTC",
-      duration: "12h 10m",
-      compliance: "Temperature excursion under review. Sensor recalibration recommended.",
-    },
-    {
-      unitId: "KRY-2901-AGR",
-      cargo: "Perishable Mango Export",
-      origin: "Nashik Cold Hub",
-      destination: "Nhava Sheva Port",
-      route: "Nashik → Port",
-      status: "Monitoring",
-      temp: 3.1,
-      humidity: 68,
-      ethylene: 11,
-      co2: 0.48,
-      eta: "1h 25m",
-      health: 96.4,
-      departure: "2026-04-20 11:00:00 UTC",
-      arrival: "2026-04-20 20:45:00 UTC",
-      duration: "9h 45m",
-      compliance: "Ethylene nearing threshold; predictive shelf-life model remains stable.",
-    },
-  ],
-  sensorLogs: [
-    { id: "log-1", shipmentId: "KRY-2847-PHR", timestamp: "2026-04-13 14:23:45 UTC", parameter: "Temperature", value: "2.4°C", sensorId: "T1-A847", status: "Compliant" },
-    { id: "log-2", shipmentId: "KRY-2847-PHR", timestamp: "2026-04-13 14:23:45 UTC", parameter: "Humidity", value: "65% RH", sensorId: "H1-B223", status: "Compliant" },
-    { id: "log-3", shipmentId: "KRY-2847-PHR", timestamp: "2026-04-13 14:23:45 UTC", parameter: "Ethylene", value: "8 PPM", sensorId: "E1-C591", status: "Compliant" },
-    { id: "log-4", shipmentId: "KRY-2847-PHR", timestamp: "2026-04-13 14:23:45 UTC", parameter: "CO2", value: "0.42% VOL", sensorId: "C1-D782", status: "Compliant" },
-    { id: "log-5", shipmentId: "KRY-2847-PHR", timestamp: "2026-04-13 13:58:10 UTC", parameter: "FT-NIR", value: "A+ Quality Index", sensorId: "A1-Q110", status: "Compliant" },
-  ],
-  events: [
-    { id: "evt-1", time: "14:23", severity: "danger", message: "Temperature excursion detected on KRY-3145" },
-    { id: "evt-2", time: "14:18", severity: "warn", message: "Ethylene levels approaching threshold on KRY-2956" },
-    { id: "evt-3", time: "14:12", severity: "safe", message: "Shipment KRY-2847 departed Mumbai facility" },
-    { id: "evt-4", time: "14:05", severity: "safe", message: "KRY-3012 entered controlled zone" },
-    { id: "evt-5", time: "13:58", severity: "warn", message: "Humidity spike detected on KRY-2901" },
-    { id: "evt-6", time: "13:42", severity: "safe", message: "All sensors calibrated successfully" },
-  ],
-  certificates: [
-    { id: "cert-1", shipmentId: "KRY-2847-PHR", certificateId: "CERT-2026-04-13-8472", issuedAt: "2026-04-13 14:47:02 UTC", notes: "Blockchain verification hash KRYO-8847-AE1C" },
-  ],
-  telemetry: [
-    { time: "00:00", temperature: 2.1, humidity: 63, ethylene: 5 },
-    { time: "04:00", temperature: 2.3, humidity: 64, ethylene: 6 },
-    { time: "08:00", temperature: 2.2, humidity: 66, ethylene: 7 },
-    { time: "12:00", temperature: 2.4, humidity: 65, ethylene: 8 },
-    { time: "16:00", temperature: 2.5, humidity: 67, ethylene: 8.4 },
-    { time: "20:00", temperature: 2.4, humidity: 65, ethylene: 8 },
-  ],
+// ─── TYPES ────────────────────────────────────────────────────────────────────
+type User = { id: number; name: string; email: string; company: string; role: string };
+type Shipment = {
+  id: number; userId: number; unitId: string; cargo: string; origin: string;
+  destination: string; route: string; status: string; temp: number; humidity: number;
+  ethylene: number; co2: number; eta: string; health: number; departure: string;
+  arrival: string; duration: string; compliance: string;
+  shelfLifeTotal: number; shelfLifeRemaining: number;
 };
 
-const eventMessages = [
-  "FT-NIR scan completed on KRY-2847",
-  "CO2 drift normalized on KRY-2901",
-  "Shelf-life model refreshed for KRY-2847",
-  "Predictive alert cleared on KRY-3012",
-  "New custody checkpoint verified",
-  "Humidity threshold watch enabled",
-];
+// ─── API HELPERS ──────────────────────────────────────────────────────────────
+async function apiFetch(path: string, options: RequestInit = {}, token?: string) {
+  const res = await fetch(`${API}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
 
-function usePersistentData() {
-  const [data, setData] = useState<AppData>(() => {
-    const saved = localStorage.getItem("kryo:data");
-    if (!saved) return seedData;
-    try {
-      return JSON.parse(saved) as AppData;
-    } catch {
-      return seedData;
-    }
+// ─── AUTH HOOK ────────────────────────────────────────────────────────────────
+function useAuth() {
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("kryo:token"));
+  const [user, setUser] = useState<User | null>(() => {
+    const u = localStorage.getItem("kryo:user");
+    return u ? JSON.parse(u) : null;
   });
 
-  useEffect(() => {
-    localStorage.setItem("kryo:data", JSON.stringify(data));
-  }, [data]);
-
-  return [data, setData] as const;
-}
-
-function useAuth() {
-  const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem("kryo:admin") === "true");
-  const login = (username: string, password: string) => {
-    if (username === "admin" && password === "kryo2026") {
-      localStorage.setItem("kryo:admin", "true");
-      setIsAdmin(true);
-      toast({ title: "Admin access granted", description: "Full read/write controls are now unlocked." });
-      return true;
-    }
-    toast({ title: "Login failed", description: "Use username admin and password kryo2026." });
-    return false;
+  const login = async (email: string, password: string) => {
+    const data = await apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    localStorage.setItem("kryo:token", data.token);
+    localStorage.setItem("kryo:user", JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
+    toast({ title: "Welcome back!", description: `Logged in as ${data.user.name}` });
+    return data.user;
   };
+
+  const signup = async (form: { name: string; email: string; password: string; company: string; phone: string }) => {
+    const data = await apiFetch("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(form),
+    });
+    localStorage.setItem("kryo:token", data.token);
+    localStorage.setItem("kryo:user", JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
+    toast({ title: "Account created!", description: "Welcome to KRYO." });
+    return data.user;
+  };
+
   const logout = () => {
-    localStorage.removeItem("kryo:admin");
-    setIsAdmin(false);
+    localStorage.removeItem("kryo:token");
+    localStorage.removeItem("kryo:user");
+    setToken(null);
+    setUser(null);
   };
-  return { isAdmin, login, logout };
+
+  return { token, user, login, signup, logout, isAdmin: user?.role === "admin" };
 }
 
-function useLiveSimulation(data: AppData, setData: React.Dispatch<React.SetStateAction<AppData>>) {
+// ─── SHIPMENTS HOOK ───────────────────────────────────────────────────────────
+function useShipments(token: string | null) {
+  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setData((current) => {
-        const drift = () => Number((Math.random() * 0.4 - 0.2).toFixed(1));
-        const now = new Date();
-        const time = now.toTimeString().slice(0, 5);
-        const lead = current.shipments[0];
-        const nextTemp = Math.max(1.8, Math.min(4.6, Number((lead.temp + drift()).toFixed(1))));
-        const nextHumidity = Math.max(58, Math.min(74, Math.round(lead.humidity + Math.random() * 4 - 2)));
-        const nextEthylene = Math.max(4, Math.min(12, Number((lead.ethylene + Math.random() * 1.2 - 0.5).toFixed(1))));
-        const nextShipments = current.shipments.map((shipment, index) => index === 0 ? { ...shipment, temp: nextTemp, humidity: nextHumidity, ethylene: nextEthylene, co2: Number((0.38 + Math.random() * 0.1).toFixed(2)) } : shipment);
-        const nextTelemetry = [...current.telemetry.slice(-5), { time, temperature: nextTemp, humidity: nextHumidity, ethylene: nextEthylene }];
-        const severity = Math.random() > 0.82 ? "warn" : "safe";
-        const nextEvent: EventItem = {
-          id: `evt-${Date.now()}`,
-          time,
-          severity,
-          message: eventMessages[Math.floor(Math.random() * eventMessages.length)],
-        };
-        return { ...current, shipments: nextShipments, telemetry: nextTelemetry, events: [nextEvent, ...current.events].slice(0, 8) };
-      });
-    }, 9000);
-    return () => window.clearInterval(timer);
-  }, [data, setData]);
+    if (!token) return;
+    setLoading(true);
+    apiFetch("/shipments", {}, token)
+      .then(setShipments)
+      .catch(() => toast({ title: "Failed to load shipments", variant: "destructive" }))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  return { shipments, loading };
 }
 
+// ─── UTILS ────────────────────────────────────────────────────────────────────
 function cx(...items: Array<string | false | null | undefined>) {
   return items.filter(Boolean).join(" ");
 }
@@ -281,16 +116,23 @@ function StatusDot({ severity = "safe" }: { severity?: "safe" | "warn" | "danger
   return <span className={cx("status-dot", severity === "warn" && "warn", severity === "danger" && "danger")} />;
 }
 
-function AppShell({ children, isAdmin, logout }: { children: React.ReactNode; isAdmin: boolean; logout: () => void }) {
-  const [location] = useLocation();
-  const links = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/inspect/KRY-2847-PHR", label: "Inspect", icon: Activity },
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/certificate/KRY-2847-PHR", label: "Certificate", icon: ClipboardCheck },
-    { href: "/admin", label: "Admin", icon: Lock },
-  ];
+function KInput({ label, type = "text", value, onChange, placeholder }: {
+  label: string; type?: string; value: string;
+  onChange: (v: string) => void; placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">{label}</span>
+      <input className="k-input" type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+    </label>
+  );
+}
 
+// ─── APP SHELL ────────────────────────────────────────────────────────────────
+function AppShell({ children, user, isAdmin, logout }: {
+  children: React.ReactNode; user: User | null; isAdmin: boolean; logout: () => void;
+}) {
+  const [location] = useLocation();
   return (
     <div className="k-app min-h-screen text-[#e9fff4]">
       <div className="noise" />
@@ -303,22 +145,16 @@ function AppShell({ children, isAdmin, logout }: { children: React.ReactNode; is
             <div className="font-mono text-[9px] uppercase tracking-[0.38em] text-[#84b899]">Mission Control</div>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
-            {links.slice(0, 4).map(({ href, label, icon: Icon }) => {
-              const active = href === "/" ? location === "/" : location.startsWith(href.split("/")[1] ? `/${href.split("/")[1]}` : href);
-              return (
-                <Link key={href} href={href} className={cx("nav-pill", active && "active")}>
-                  <Icon size={14} />
-                  {label}
-                </Link>
-              );
-            })}
-            <Link href="/admin" className={cx("nav-pill", location.startsWith("/admin") && "active")}> 
-              <Lock size={14} />
-              Admin
-            </Link>
-            {isAdmin && <button onClick={logout} className="nav-pill"><LogOut size={14} />Logout</button>}
+            <Link href="/" className={cx("nav-pill", location === "/" && "active")}><Home size={14} />Home</Link>
+            {user && <Link href="/dashboard" className={cx("nav-pill", location.startsWith("/dashboard") && "active")}><LayoutDashboard size={14} />Dashboard</Link>}
+            <Link href="/contact" className={cx("nav-pill", location === "/contact" && "active")}><RadioTower size={14} />Contact</Link>
+            <Link href="/demo" className={cx("nav-pill", location === "/demo" && "active")}><Sparkles size={14} />Request Demo</Link>
+            {isAdmin && <Link href="/admin" className={cx("nav-pill", location.startsWith("/admin") && "active")}><Lock size={14} />Admin</Link>}
+            {user
+              ? <button onClick={logout} className="nav-pill"><LogOut size={14} />Logout</button>
+              : <Link href="/login" className={cx("nav-pill", location === "/login" && "active")}><User size={14} />Login</Link>}
           </nav>
-          {isAdmin && <div className="admin-badge"><User size={13} />Admin</div>}
+          {user && <div className="admin-badge"><User size={13} />{user.name}</div>}
         </div>
       </header>
       <main className="mx-auto max-w-[1220px] px-5 py-9 md:px-7">{children}</main>
@@ -338,8 +174,8 @@ function PageTitle({ title, subtitle, action }: { title: string; subtitle: strin
   );
 }
 
-function LandingPage({ data }: { data: AppData }) {
-  const lead = data.shipments[0];
+// ─── LANDING PAGE ─────────────────────────────────────────────────────────────
+function LandingPage() {
   return (
     <section className="relative overflow-hidden pb-12 pt-5 md:pt-16">
       <div className="hero-grid" />
@@ -353,8 +189,8 @@ function LandingPage({ data }: { data: AppData }) {
             Real-time molecular monitoring for pharmaceutical cold chains and perishable cargo. FT-NIR spectroscopy meets predictive AI. Never lose another shipment to spoilage.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
-            <Link href="/dashboard" className="primary-btn">Start Free Trial <ChevronRight size={17} /></Link>
-            <Link href="/inspect/KRY-2847-PHR" className="secondary-btn">View Demo</Link>
+            <Link href="/signup" className="primary-btn">Start Free Trial <ChevronRight size={17} /></Link>
+            <Link href="/demo" className="secondary-btn">Request Demo</Link>
           </div>
           <div className="mt-8 flex flex-wrap gap-6 text-xs text-[#95aa9b]">
             <span className="flex items-center gap-2"><ShieldCheck size={16} className="text-[#22ff99]" />WHO PQS Certified</span>
@@ -365,294 +201,569 @@ function LandingPage({ data }: { data: AppData }) {
         <div className="relative mx-auto h-[430px] w-full max-w-[470px]">
           <div className="live-card absolute inset-0">
             <div className="corner tl" /><div className="corner tr" /><div className="corner bl" /><div className="corner br" />
-            <div className="active-pill"><StatusDot />Active</div>
+            <div className="active-pill"><StatusDot />Live</div>
             <div className="sensor-field">
               <div className="pulse-core" />
-              <MetricTile className="left-[12%] top-[34%]" label="TEMP" value={`${lead.temp.toFixed(1)}°C`} />
-              <MetricTile className="right-[6%] top-[43%]" label="ETHYLENE" value={`${Math.round(lead.ethylene)} PPM`} />
-              <MetricTile className="left-[9%] bottom-[23%]" label="SHELF LIFE" value="14d 6h" />
-              <MetricTile className="right-[9%] bottom-[16%]" label="HUMIDITY" value={`${lead.humidity}%`} />
+              <div className="metric-tile absolute left-[12%] top-[34%]"><div>TEMP</div><strong>2.4°C</strong></div>
+              <div className="metric-tile absolute right-[6%] top-[43%]"><div>ETHYLENE</div><strong>8 PPM</strong></div>
+              <div className="metric-tile absolute left-[9%] bottom-[23%]"><div>SHELF LIFE</div><strong>14d 6h</strong></div>
+              <div className="metric-tile absolute right-[9%] bottom-[16%]"><div>HUMIDITY</div><strong>65%</strong></div>
             </div>
           </div>
         </div>
       </div>
       <div className="mt-16 grid grid-cols-2 gap-6 border-t border-[#0f2d1d] pt-8 md:grid-cols-4">
-        <StatBig value="12K+" label="Sensors Deployed" />
-        <StatBig value="98.7%" label="Compliance Rate" />
-        <StatBig value="$45M" label="Cargo Protected" />
-        <StatBig value="24/7" label="Live Monitoring" />
+        {[["12K+", "Sensors Deployed"], ["98.7%", "Compliance Rate"], ["$45M", "Cargo Protected"], ["24/7", "Live Monitoring"]].map(([v, l]) => (
+          <div key={l} className="text-center">
+            <div className="text-4xl font-light tracking-tight text-[#22ff99]">{v}</div>
+            <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[#789184]">{l}</div>
+          </div>
+        ))}
       </div>
     </section>
   );
 }
 
-function MetricTile({ label, value, className }: { label: string; value: string; className?: string }) {
-  return <div className={cx("metric-tile absolute", className)}><div>{label}</div><strong>{value}</strong></div>;
-}
+// ─── SIGNUP PAGE ──────────────────────────────────────────────────────────────
+function SignupPage({ auth }: { auth: ReturnType<typeof useAuth> }) {
+  const [, navigate] = useLocation();
+  const [form, setForm] = useState({ name: "", email: "", password: "", company: "", phone: "" });
+  const [loading, setLoading] = useState(false);
 
-function StatBig({ value, label }: { value: string; label: string }) {
-  return <div className="text-center"><div className="text-4xl font-light tracking-tight text-[#22ff99]">{value}</div><div className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[#789184]">{label}</div></div>;
-}
-
-function DashboardPage({ data }: { data: AppData }) {
-  const avgTemp = data.shipments.reduce((sum, item) => sum + item.temp, 0) / data.shipments.length;
-  const alerts = data.shipments.filter((item) => item.status === "Alert").length + data.events.filter((item) => item.severity !== "safe").length;
-  const avgHealth = data.shipments.reduce((sum, item) => sum + item.health, 0) / data.shipments.length;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await auth.signup(form);
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast({ title: "Signup failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div>
-      <PageTitle title="Fleet Command Center" subtitle="Real-time monitoring across all active shipments" action={<div className="live-monitor"><StatusDot />Live Monitoring</div>} />
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard icon={Box} value="847" unit="UNITS" label="Active Shipments" delta="+12" />
-        <StatCard icon={Thermometer} value={avgTemp.toFixed(1)} unit="°C" label="Fleet Temperature" delta="+0.2" />
-        <StatCard icon={AlertTriangle} value={alerts.toString()} unit="EVENTS" label="Active Alerts" delta="+1" />
-        <StatCard icon={Activity} value={avgHealth.toFixed(1)} unit="%" label="System Health" delta="0.0" />
-      </div>
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_300px]">
-        <Panel className="min-h-[360px] p-6">
-          <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-            <h2 className="text-lg font-bold text-white">Fleet Telemetry - Last 24 Hours</h2>
-            <div className="flex gap-4 font-mono text-[11px] text-[#88a293]"><span className="text-[#22ff99]">Temperature</span><span className="text-cyan-300">Humidity</span><span className="text-orange-400">Ethylene</span></div>
-          </div>
-          <ResponsiveContainer width="100%" height={270}>
-            <LineChart data={data.telemetry} margin={{ left: -20, right: 15, top: 10, bottom: 0 }}>
-              <CartesianGrid stroke="#103321" strokeDasharray="3 3" />
-              <XAxis dataKey="time" stroke="#63806f" tick={{ fontSize: 11 }} />
-              <YAxis stroke="#63806f" tick={{ fontSize: 11 }} />
-              <Tooltip contentStyle={{ background: "#07150c", border: "1px solid #174e30", color: "#dfffee" }} />
-              <Line type="monotone" dataKey="temperature" stroke="#22ff99" strokeWidth={2} dot={{ r: 3, fill: "#22ff99" }} />
-              <Line type="monotone" dataKey="humidity" stroke="#2ee8ff" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="ethylene" stroke="#ff9f38" strokeWidth={2} dot={{ r: 3, fill: "#ff9f38" }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Panel>
-        <Panel className="p-5">
-          <h2 className="flex items-center gap-2 text-base font-bold text-white"><Radar size={16} className="text-[#22ff99]" />Event Feed</h2>
-          <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#91a798]">Real-time system events</div>
-          <div className="mt-5 space-y-4">
-            {data.events.slice(0, 6).map((event) => <EventRow key={event.id} event={event} />)}
-          </div>
-        </Panel>
-      </div>
-      <Panel className="mt-6 overflow-hidden p-0">
-        <div className="border-b border-[#113722] p-6"><h2 className="text-xl font-bold text-white">Active Shipments</h2></div>
-        <div className="overflow-x-auto">
-          <table className="k-table">
-            <thead><tr><th>Unit ID</th><th>Cargo</th><th>Route</th><th>Status</th><th>Temp</th><th>ETA</th><th>Actions</th></tr></thead>
-            <tbody>
-              {data.shipments.map((shipment) => (
-                <tr key={shipment.unitId}>
-                  <td className="font-mono text-[#dffff0]">{shipment.unitId}</td>
-                  <td>{shipment.cargo}</td>
-                  <td>{shipment.route}</td>
-                  <td><span className={cx("status-badge", shipment.status === "Alert" && "alert")}>{shipment.status}</span></td>
-                  <td className="text-[#22ff99]">{shipment.temp.toFixed(1)}°C</td>
-                  <td>{shipment.eta}</td>
-                  <td className="space-x-2"><Link className="text-link" href={`/inspect/${shipment.unitId}`}>Inspect</Link><Link className="text-link" href={`/certificate/${shipment.unitId}`}>Certificate</Link></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="mx-auto max-w-md pt-12">
+      <Panel className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-black text-white">Start Free Trial</h1>
+          <p className="mt-1 text-sm text-[#8fa597]">Create your KRYO account and monitor your cold chain in real time.</p>
         </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <KInput label="Full Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="John Smith" />
+          <KInput label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="john@company.com" />
+          <KInput label="Password" type="password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder="Min 8 characters" />
+          <KInput label="Company" value={form.company} onChange={(v) => setForm({ ...form, company: v })} placeholder="Acme Pharma Ltd." />
+          <KInput label="Phone Number" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" />
+          <button className="primary-btn w-full" type="submit" disabled={loading}>
+            {loading ? "Creating account..." : <><Sparkles size={16} />Create Account</>}
+          </button>
+        </form>
+        <p className="mt-5 text-center text-xs text-[#7a9186]">Already have an account? <Link href="/login" className="text-link">Login</Link></p>
       </Panel>
     </div>
   );
 }
 
-function StatCard({ icon: Icon, value, unit, label, delta }: { icon: React.ComponentType<{ size?: number; className?: string }>; value: string; unit: string; label: string; delta: string }) {
-  return <Panel className="stat-card"><div className="flex justify-between"><Icon size={22} className="text-[#22ff99]" /><span className="delta">{delta}</span></div><div className="mt-6"><span className="text-4xl font-light text-white">{value}</span><span className="ml-3 font-mono text-xs text-[#a2b5a9]">{unit}</span></div><div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#6e8978]">{label}</div></Panel>;
+// ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
+function LoginPage({ auth }: { auth: ReturnType<typeof useAuth> }) {
+  const [, navigate] = useLocation();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const user = await auth.login(email, password);
+      navigate(user.role === "admin" ? "/admin" : "/dashboard");
+    } catch (err: any) {
+      toast({ title: "Login failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-md pt-12">
+      <Panel className="p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <Lock className="text-[#22ff99]" />
+          <div>
+            <h1 className="text-2xl font-black text-white">Login</h1>
+            <p className="text-sm text-[#8fa597]">Access your KRYO dashboard.</p>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <KInput label="Email" type="email" value={email} onChange={setEmail} placeholder="you@company.com" />
+          <KInput label="Password" type="password" value={password} onChange={setPassword} placeholder="Your password" />
+          <button className="primary-btn w-full" type="submit" disabled={loading}>
+            {loading ? "Logging in..." : <><Lock size={16} />Login</>}
+          </button>
+        </form>
+        <p className="mt-5 text-center text-xs text-[#7a9186]">No account? <Link href="/signup" className="text-link">Start free trial</Link></p>
+      </Panel>
+    </div>
+  );
 }
 
-function EventRow({ event }: { event: EventItem }) {
-  return <div className="grid grid-cols-[14px_42px_1fr] gap-2 text-xs"><StatusDot severity={event.severity} /><span className="font-mono text-[#718879]">{event.time}</span><span className={cx("leading-5 text-[#d5efe0]", event.severity === "warn" && "text-orange-300", event.severity === "danger" && "text-red-300")}>{event.message}</span></div>;
+// ─── CONTACT PAGE ─────────────────────────────────────────────────────────────
+function ContactPage() {
+  const [form, setForm] = useState({ name: "", email: "", company: "", phone: "", message: "" });
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await apiFetch("/inquiries", { method: "POST", body: JSON.stringify({ ...form, type: "inquiry" }) });
+      setDone(true);
+      toast({ title: "Message sent!", description: "We'll get back to you within 24 hours." });
+    } catch (err: any) {
+      toast({ title: "Failed to send", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (done) return (
+    <div className="mx-auto max-w-md pt-12 text-center">
+      <CheckCircle2 size={48} className="mx-auto text-[#22ff99]" />
+      <h2 className="mt-4 text-2xl font-black text-white">Message Received</h2>
+      <p className="mt-2 text-[#8fa597]">We'll get back to you within 24 hours.</p>
+      <Link href="/" className="primary-btn mt-6 inline-flex">Back to Home</Link>
+    </div>
+  );
+
+  return (
+    <div className="mx-auto max-w-lg pt-8">
+      <PageTitle title="Contact Us" subtitle="Get in touch with the KRYO team." />
+      <Panel className="p-8">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <KInput label="Full Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="John Smith" />
+            <KInput label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="john@company.com" />
+            <KInput label="Company" value={form.company} onChange={(v) => setForm({ ...form, company: v })} placeholder="Acme Pharma Ltd." />
+            <KInput label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" />
+          </div>
+          <label className="block">
+            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">Message</span>
+            <textarea className="k-input min-h-[120px] resize-none" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Tell us about your cold chain needs..." />
+          </label>
+          <button className="primary-btn w-full" type="submit" disabled={loading}>
+            {loading ? "Sending..." : "Send Message"}
+          </button>
+        </form>
+      </Panel>
+    </div>
+  );
 }
 
-function InspectPage({ data }: { data: AppData }) {
-  const [location] = useLocation();
-  const id = decodeURIComponent(location.split("/").pop() || "KRY-2847-PHR");
-  const shipment = data.shipments.find((item) => item.unitId === id) || data.shipments[0];
-  const nirData = [28, 42, 58, 73, 56, 66, 84, 68, 55, 49, 62, 76, 81, 63, 52, 44, 35, 29].map((value, index) => ({ name: index.toString(), value }));
-  const co2Data = [{ name: "CO2", value: shipment.co2 * 100, fill: "#22ff99" }];
+// ─── DEMO REQUEST PAGE ────────────────────────────────────────────────────────
+function DemoPage() {
+  const [form, setForm] = useState({ name: "", email: "", company: "", phone: "", message: "" });
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await apiFetch("/inquiries", { method: "POST", body: JSON.stringify({ ...form, type: "demo", message: form.message || "Demo request" }) });
+      setDone(true);
+      toast({ title: "Demo requested!", description: "Our team will schedule a call with you shortly." });
+    } catch (err: any) {
+      toast({ title: "Failed to submit", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (done) return (
+    <div className="mx-auto max-w-md pt-12 text-center">
+      <Sparkles size={48} className="mx-auto text-[#22ff99]" />
+      <h2 className="mt-4 text-2xl font-black text-white">Demo Requested!</h2>
+      <p className="mt-2 text-[#8fa597]">Our team will reach out within 1 business day to schedule your demo.</p>
+      <Link href="/" className="primary-btn mt-6 inline-flex">Back to Home</Link>
+    </div>
+  );
+
+  return (
+    <div className="mx-auto max-w-lg pt-8">
+      <PageTitle title="Request a Demo" subtitle="See KRYO in action with a live walkthrough from our team." />
+      <Panel className="p-8">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <KInput label="Full Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="John Smith" />
+            <KInput label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="john@company.com" />
+            <KInput label="Company" value={form.company} onChange={(v) => setForm({ ...form, company: v })} placeholder="Acme Pharma Ltd." />
+            <KInput label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" />
+          </div>
+          <label className="block">
+            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">What are you monitoring?</span>
+            <textarea className="k-input min-h-[100px] resize-none" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="e.g. Pharmaceutical vaccines, perishable produce, biologics..." />
+          </label>
+          <button className="primary-btn w-full" type="submit" disabled={loading}>
+            {loading ? "Submitting..." : <><Sparkles size={16} />Request Demo</>}
+          </button>
+        </form>
+      </Panel>
+    </div>
+  );
+}
+
+// ─── USER DASHBOARD ───────────────────────────────────────────────────────────
+function DashboardPage({ token }: { token: string | null }) {
+  const { shipments, loading } = useShipments(token);
+  const telemetry = [
+    { time: "00:00", temperature: 2.1, humidity: 63, ethylene: 5 },
+    { time: "04:00", temperature: 2.3, humidity: 64, ethylene: 6 },
+    { time: "08:00", temperature: 2.2, humidity: 66, ethylene: 7 },
+    { time: "12:00", temperature: 2.4, humidity: 65, ethylene: 8 },
+    { time: "16:00", temperature: 2.5, humidity: 67, ethylene: 8.4 },
+    { time: "20:00", temperature: 2.4, humidity: 65, ethylene: 8 },
+  ];
+
+  if (loading) return <div className="py-24 text-center text-[#22ff99] font-mono">Loading shipments...</div>;
 
   return (
     <div>
-      <PageTitle title="Sensor Inspect Mode" subtitle="Real-time molecular analysis and environmental monitoring" action={<div className="live-monitor"><Activity size={14} />6 Sensors Active</div>} />
-      <div className="grid gap-7 lg:grid-cols-[1fr_1fr]">
-        <Panel className="min-h-[620px] p-5">
-          <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#91aa9c]">Container Unit Cross-Section</div>
-          <h2 className="mt-1 font-mono text-xl font-bold tracking-wider text-white">{shipment.unitId}</h2>
-          <ContainerDiagram />
+      <PageTitle title="My Dashboard" subtitle="Monitor your cold chain shipments in real time" action={<div className="live-monitor"><StatusDot />Live Monitoring</div>} />
+      {shipments.length === 0 ? (
+        <Panel className="p-12 text-center">
+          <Box size={48} className="mx-auto text-[#22ff99] opacity-40" />
+          <h2 className="mt-4 text-xl font-bold text-white">No shipments yet</h2>
+          <p className="mt-2 text-[#8fa597]">Your shipments will appear here once assigned by the KRYO team.</p>
+          <Link href="/contact" className="primary-btn mt-6 inline-flex">Contact Us</Link>
         </Panel>
-        <div className="space-y-5">
-          <Panel className="p-5">
-            <PanelHeader icon={Activity} title="FT-NIR Spectroscopy" />
-            <ResponsiveContainer width="100%" height={150}>
-              <BarChart data={nirData} margin={{ left: 0, right: 0, bottom: 0, top: 20 }}>
-                <Bar dataKey="value" radius={[3, 3, 0, 0]}>{nirData.map((_, index) => <Cell key={index} fill={`rgba(34,255,153,${0.28 + index / 38})`} />)}</Bar>
-              </BarChart>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-4 mb-6">
+            <StatCard icon={Box} value={shipments.length.toString()} unit="UNITS" label="Your Shipments" />
+            <StatCard icon={Thermometer} value={(shipments.reduce((s, x) => s + x.temp, 0) / shipments.length).toFixed(1)} unit="°C" label="Avg Temperature" />
+            <StatCard icon={AlertTriangle} value={shipments.filter(s => s.status === "Alert").length.toString()} unit="ALERTS" label="Active Alerts" />
+            <StatCard icon={Activity} value={(shipments.reduce((s, x) => s + x.health, 0) / shipments.length).toFixed(1)} unit="%" label="Fleet Health" />
+          </div>
+          <Panel className="mb-6 p-6">
+            <h2 className="mb-4 text-lg font-bold text-white">Telemetry — Last 24 Hours</h2>
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={telemetry} margin={{ left: -20, right: 15, top: 10, bottom: 0 }}>
+                <CartesianGrid stroke="#103321" strokeDasharray="3 3" />
+                <XAxis dataKey="time" stroke="#63806f" tick={{ fontSize: 11 }} />
+                <YAxis stroke="#63806f" tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: "#07150c", border: "1px solid #174e30", color: "#dfffee" }} />
+                <Line type="monotone" dataKey="temperature" stroke="#22ff99" strokeWidth={2} dot={{ r: 3, fill: "#22ff99" }} />
+                <Line type="monotone" dataKey="humidity" stroke="#2ee8ff" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="ethylene" stroke="#ff9f38" strokeWidth={2} dot={{ r: 3, fill: "#ff9f38" }} />
+              </LineChart>
             </ResponsiveContainer>
-            <div className="grid grid-cols-3 gap-4 font-mono text-xs"><Metric label="Ripeness" value="84%" /><Metric label="Sugar Brix" value="12.4°" /><Metric label="Quality Index" value="A+" /></div>
           </Panel>
-          <Panel className="p-5">
-            <PanelHeader icon={Waves} title="Ethylene Gas Detection" />
-            <div className="mt-5 h-7 overflow-hidden rounded-full bg-[#082814]"><div className="h-full rounded-full bg-gradient-to-r from-[#22ff99] to-[#d6a632]" style={{ width: `${Math.min(100, shipment.ethylene / 25 * 100)}%` }} /></div>
-            <div className="mt-2 flex justify-between font-mono text-[10px] text-[#7b9686]"><span>0 PPM</span><span className="text-orange-300">Threshold: 12 PPM</span><span>25 PPM</span></div>
-            <div className="-mt-8 text-center text-lg font-bold text-white">{Math.round(shipment.ethylene)} PPM</div>
+          <Panel className="overflow-hidden p-0">
+            <div className="border-b border-[#113722] p-6"><h2 className="text-xl font-bold text-white">Your Shipments</h2></div>
+            <div className="overflow-x-auto">
+              <table className="k-table">
+                <thead><tr><th>Unit ID</th><th>Cargo</th><th>Route</th><th>Status</th><th>Temp</th><th>Humidity</th><th>Ethylene</th><th>Shelf Life</th><th>ETA</th><th>Health</th></tr></thead>
+                <tbody>
+                  {shipments.map((s) => (
+                    <tr key={s.id}>
+                      <td className="font-mono text-[#dffff0]">{s.unitId}</td>
+                      <td>{s.cargo}</td>
+                      <td>{s.route}</td>
+                      <td><span className={cx("status-badge", s.status === "Alert" && "alert")}>{s.status}</span></td>
+                      <td className="text-[#22ff99]">{s.temp.toFixed(1)}°C</td>
+                      <td>{s.humidity}%</td>
+                      <td>{s.ethylene} PPM</td>
+                      <td>{s.shelfLifeRemaining}h / {s.shelfLifeTotal}h</td>
+                      <td>{s.eta}</td>
+                      <td><span className="text-[#22ff99]">{s.health}%</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Panel>
-          <Panel className="p-5">
-            <PanelHeader icon={Gauge} title="CO2 Concentration" />
-            <div className="relative mx-auto h-[210px] max-w-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadialBarChart innerRadius="70%" outerRadius="92%" data={co2Data} startAngle={90} endAngle={-270}>
-                  <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                  <RadialBar dataKey="value" background={{ fill: "#0d2718" }} cornerRadius={20} />
-                </RadialBarChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center"><div className="font-mono text-4xl text-[#22ff99]">{shipment.co2.toFixed(2)}</div><div className="font-mono text-xs uppercase text-[#9bb1a3]">% VOL</div></div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, value, unit, label }: { icon: React.ComponentType<{ size?: number; className?: string }>; value: string; unit: string; label: string }) {
+  return <Panel className="stat-card"><Icon size={22} className="text-[#22ff99]" /><div className="mt-6"><span className="text-4xl font-light text-white">{value}</span><span className="ml-3 font-mono text-xs text-[#a2b5a9]">{unit}</span></div><div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#6e8978]">{label}</div></Panel>;
+}
+
+// ─── ADMIN PAGE ───────────────────────────────────────────────────────────────
+function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean }) {
+  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [tab, setTab] = useState<"inquiries" | "users" | "shipments">("inquiries");
+  const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
+  const [shipmentForm, setShipmentForm] = useState({
+    unitId: "", cargo: "", origin: "", destination: "", route: "",
+    status: "Monitoring", temp: "2.4", humidity: "65", ethylene: "8",
+    co2: "0.42", eta: "4h", health: "98", departure: "", arrival: "",
+    duration: "", compliance: "All readings compliant.",
+    shelfLifeTotal: "336", shelfLifeRemaining: "336",
+  });
+  const [assignUserId, setAssignUserId] = useState("");
+  const [savingShipment, setSavingShipment] = useState(false);
+
+  const loadData = () => {
+    if (!token || !isAdmin) return;
+    apiFetch("/inquiries", {}, token).then(setInquiries).catch(() => {});
+    apiFetch("/users", {}, token).then(setUsers).catch(() => {});
+  };
+
+  useEffect(() => { loadData(); }, [token, isAdmin]);
+
+  const deleteInquiry = async (id: number) => {
+    await apiFetch(`/inquiries/${id}`, { method: "DELETE" }, token!);
+    setInquiries((prev) => prev.filter((i) => i.id !== id));
+    setSelectedInquiry(null);
+    toast({ title: "Inquiry deleted" });
+  };
+
+  const assignShipment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignUserId) return toast({ title: "Select a user first", variant: "destructive" });
+    setSavingShipment(true);
+    try {
+      await apiFetch(`/users/${assignUserId}/shipments`, {
+        method: "POST",
+        body: JSON.stringify({
+          ...shipmentForm,
+          temp: Number(shipmentForm.temp),
+          humidity: Number(shipmentForm.humidity),
+          ethylene: Number(shipmentForm.ethylene),
+          co2: Number(shipmentForm.co2),
+          health: Number(shipmentForm.health),
+          shelfLifeTotal: Number(shipmentForm.shelfLifeTotal),
+          shelfLifeRemaining: Number(shipmentForm.shelfLifeRemaining),
+        }),
+      }, token!);
+      toast({ title: "Shipment assigned!", description: `${shipmentForm.unitId} assigned to user.` });
+      setShipmentForm({ unitId: "", cargo: "", origin: "", destination: "", route: "", status: "Monitoring", temp: "2.4", humidity: "65", ethylene: "8", co2: "0.42", eta: "4h", health: "98", departure: "", arrival: "", duration: "", compliance: "All readings compliant.", shelfLifeTotal: "336", shelfLifeRemaining: "336" });
+    } catch (err: any) {
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingShipment(false);
+    }
+  };
+
+  const deleteUser = async (id: number) => {
+    await apiFetch(`/users/${id}`, { method: "DELETE" }, token!);
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    toast({ title: "User deleted" });
+  };
+
+  if (!isAdmin) return (
+    <div className="py-24 text-center">
+      <Lock size={48} className="mx-auto text-[#ff355e] opacity-60" />
+      <h2 className="mt-4 text-2xl font-black text-white">Admin Access Required</h2>
+    </div>
+  );
+
+  return (
+    <div>
+      <PageTitle title="Admin Panel" subtitle="Manage users, shipments, inquiries and demo requests" />
+      <div className="mb-6 flex gap-3">
+        <button onClick={() => setTab("inquiries")} className={cx("nav-pill", tab === "inquiries" && "active")}>
+          Inquiries & Demos ({inquiries.length})
+        </button>
+        <button onClick={() => setTab("users")} className={cx("nav-pill", tab === "users" && "active")}>
+          Users ({users.length})
+        </button>
+        <button onClick={() => setTab("shipments")} className={cx("nav-pill", tab === "shipments" && "active")}>
+          Assign Shipment
+        </button>
+      </div>
+
+      {tab === "inquiries" && (
+        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+          <Panel className="overflow-hidden p-0">
+            <div className="border-b border-[#113722] p-5">
+              <h2 className="text-lg font-bold text-white">All Inquiries & Demo Requests</h2>
+            </div>
+            {inquiries.length === 0 ? (
+              <div className="p-12 text-center text-[#8fa597]">No inquiries yet.</div>
+            ) : (
+              <div className="divide-y divide-[#0d2518]">
+                {inquiries.map((inq) => (
+                  <div key={inq.id} onClick={() => setSelectedInquiry(inq)}
+                    className={cx("cursor-pointer p-5 transition-colors hover:bg-[rgba(34,255,153,0.04)]", selectedInquiry?.id === inq.id && "bg-[rgba(34,255,153,0.07)]")}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={cx("status-badge text-[9px]", inq.type === "demo" && "alert")}>{inq.type}</span>
+                          <span className="font-bold text-white">{inq.name}</span>
+                        </div>
+                        <div className="mt-1 font-mono text-xs text-[#22ff99]">{inq.email}</div>
+                        <div className="mt-1 text-xs text-[#8fa597]">{inq.company} · {inq.phone}</div>
+                        <div className="mt-2 text-sm text-[#b7cec1] line-clamp-2">{inq.message}</div>
+                      </div>
+                      <div className="font-mono text-[10px] text-[#8fa597] whitespace-nowrap">
+                        {new Date(inq.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+
+          {selectedInquiry && (
+            <Panel className="p-6 self-start">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-white text-lg">Full Details</h3>
+                <button onClick={() => setSelectedInquiry(null)} className="text-[#8fa597] hover:text-white text-xs">✕ Close</button>
+              </div>
+              <div className="space-y-3">
+                <div><div className="font-mono text-[10px] uppercase text-[#8aa090]">Type</div><span className={cx("status-badge mt-1 inline-block", selectedInquiry.type === "demo" && "alert")}>{selectedInquiry.type}</span></div>
+                <div><div className="font-mono text-[10px] uppercase text-[#8aa090]">Name</div><div className="text-white font-bold">{selectedInquiry.name}</div></div>
+                <div><div className="font-mono text-[10px] uppercase text-[#8aa090]">Email</div><div className="text-[#22ff99] font-mono text-sm">{selectedInquiry.email}</div></div>
+                <div><div className="font-mono text-[10px] uppercase text-[#8aa090]">Company</div><div className="text-[#b7cec1]">{selectedInquiry.company}</div></div>
+                <div><div className="font-mono text-[10px] uppercase text-[#8aa090]">Phone</div><div className="text-[#b7cec1]">{selectedInquiry.phone}</div></div>
+                <div><div className="font-mono text-[10px] uppercase text-[#8aa090]">Date</div><div className="text-[#b7cec1] font-mono text-xs">{new Date(selectedInquiry.createdAt).toLocaleString()}</div></div>
+                <div><div className="font-mono text-[10px] uppercase text-[#8aa090] mb-1">Message</div><div className="text-[#b7cec1] text-sm leading-relaxed bg-[rgba(34,255,153,0.03)] border border-[rgba(34,255,153,0.1)] p-3">{selectedInquiry.message}</div></div>
+              </div>
+              <div className="mt-5 flex gap-3">
+                <a href={`mailto:${selectedInquiry.email}`} className="primary-btn compact flex-1 text-center">Reply via Email</a>
+                <button onClick={() => deleteInquiry(selectedInquiry.id)} className="secondary-btn compact text-[#ff6682]">Delete</button>
+              </div>
+            </Panel>
+          )}
+        </div>
+      )}
+
+      {tab === "users" && (
+        <Panel className="overflow-hidden p-0">
+          <div className="border-b border-[#113722] p-5">
+            <h2 className="text-lg font-bold text-white">Registered Users</h2>
+          </div>
+          {users.length === 0 ? (
+            <div className="p-12 text-center text-[#8fa597]">No users yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="k-table">
+                <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Phone</th><th>Role</th><th>Joined</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id}>
+                      <td className="text-white font-bold">{u.name}</td>
+                      <td className="font-mono text-[#22ff99] text-xs">{u.email}</td>
+                      <td>{u.company}</td>
+                      <td>{u.phone}</td>
+                      <td><span className={cx("status-badge", u.role === "admin" && "alert")}>{u.role}</span></td>
+                      <td className="font-mono text-xs text-[#8fa597]">{new Date(u.createdAt).toLocaleDateString()}</td>
+                      <td>
+                        {u.role !== "admin" && (
+                          <button onClick={() => deleteUser(u.id)} className="text-link danger text-xs">Delete</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+      )}
+
+      {tab === "shipments" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Panel className="p-6">
+            <h2 className="mb-4 text-lg font-bold text-white">Assign Shipment to User</h2>
+            <form onSubmit={assignShipment} className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">Assign to User</span>
+                <select className="k-input" value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)}>
+                  <option value="">Select a user...</option>
+                  {users.filter(u => u.role !== "admin").map((u) => (
+                    <option key={u.id} value={u.id}>{u.name} — {u.company}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  ["Unit ID", "unitId"], ["Cargo", "cargo"], ["Origin", "origin"],
+                  ["Destination", "destination"], ["Route", "route"], ["Status", "status"],
+                  ["Temp (°C)", "temp"], ["Humidity (%)", "humidity"],
+                  ["Ethylene (PPM)", "ethylene"], ["CO2", "co2"],
+                  ["ETA", "eta"], ["Health (%)", "health"],
+                  ["Departure", "departure"], ["Arrival", "arrival"],
+                  ["Duration", "duration"], ["Shelf Life Total (hrs)", "shelfLifeTotal"],
+                  ["Shelf Life Remaining (hrs)", "shelfLifeRemaining"],
+                ].map(([label, key]) => (
+                  <label key={key} className="block">
+                    <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">{label}</span>
+                    <input className="k-input" value={(shipmentForm as any)[key]}
+                      onChange={(e) => setShipmentForm({ ...shipmentForm, [key]: e.target.value })} />
+                  </label>
+                ))}
+              </div>
+              <label className="block">
+                <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">Compliance Notes</span>
+                <textarea className="k-input min-h-[80px] resize-none" value={shipmentForm.compliance}
+                  onChange={(e) => setShipmentForm({ ...shipmentForm, compliance: e.target.value })} />
+              </label>
+              <button className="primary-btn w-full" type="submit" disabled={savingShipment}>
+                {savingShipment ? "Assigning..." : "Assign Shipment to User"}
+              </button>
+            </form>
+          </Panel>
+          <Panel className="p-6">
+            <h2 className="mb-4 text-lg font-bold text-white">How it works</h2>
+            <div className="space-y-4 text-sm text-[#8fa597]">
+              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">01</span><span>A user signs up for a free trial on the website</span></div>
+              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">02</span><span>They appear in the Users tab above</span></div>
+              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">03</span><span>You fill in their shipment details here and assign it to them</span></div>
+              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">04</span><span>They log in and see their shipments in their dashboard</span></div>
+              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">05</span><span>They can monitor temperature, humidity, ethylene, shelf life and ETA in real time</span></div>
             </div>
           </Panel>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-
-function PanelHeader({ icon: Icon, title }: { icon: React.ComponentType<{ size?: number; className?: string }>; title: string }) {
-  return <div className="mb-2 flex items-center justify-between"><h3 className="flex items-center gap-3 font-bold text-white"><Icon size={18} className="text-[#22ff99]" />{title}</h3><span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-[#a6b9ad]"><StatusDot />Live</span></div>;
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div><div className="uppercase tracking-[0.18em] text-[#769181]">{label}</div><div className="mt-1 text-lg text-[#22ff99]">{value}</div></div>;
-}
-
-function ContainerDiagram() {
-  const sensors = [
-    { id: "T1", x: "20%", y: "22%" }, { id: "T2", x: "80%", y: "22%" }, { id: "E1", x: "54%", y: "39%" },
-    { id: "C1", x: "26%", y: "58%" }, { id: "H1", x: "75%", y: "58%" }, { id: "A1", x: "54%", y: "82%" },
-  ];
-  return <div className="container-diagram"><div className="container-box"><div className="container-shape" />{sensors.map((sensor) => <div key={sensor.id} className="sensor-dot-wrap" style={{ left: sensor.x, top: sensor.y }}><span className="sensor-dot" /><span className="sensor-label">{sensor.id}</span></div>)}</div></div>;
-}
-
-function CertificatePage({ data }: { data: AppData }) {
-  const [location] = useLocation();
-  const id = decodeURIComponent(location.split("/").pop() || "KRY-2847-PHR");
-  const shipment = data.shipments.find((item) => item.unitId === id) || data.shipments[0];
-  const certificate = data.certificates.find((item) => item.shipmentId === shipment.unitId) || data.certificates[0];
-  const logs = data.sensorLogs.filter((log) => log.shipmentId === shipment.unitId);
-  const download = () => {
-    const content = `KRYO Chain-of-Custody Certificate\n${certificate.certificateId}\nShipment: ${shipment.unitId}\nCargo: ${shipment.cargo}\nRoute: ${shipment.route}\nStatus: ${shipment.status}\nIssued: ${certificate.issuedAt}`;
-    const blob = new Blob([content], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${certificate.certificateId}.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast({ title: "PDF certificate generated", description: "The certificate download has started." });
-  };
-  const verify = () => toast({ title: "Blockchain verification successful", description: `${certificate.notes} confirmed on the mock custody ledger.` });
-
-  return (
-    <div>
-      <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-center">
-        <div><div className="flex items-center gap-8"><h1 className="text-3xl font-black text-white">KRYO</h1><span className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#8ba797]">Molecular Surveillance Platform</span></div><div className="mt-3 text-lg font-bold text-[#22ff99]">Chain-of-Custody Certificate</div></div>
-        <div className="flex gap-3"><button onClick={download} className="secondary-btn compact"><Download size={15} />Download PDF</button><button onClick={verify} className="primary-btn compact"><ShieldCheck size={15} />Verify on Blockchain</button></div>
-      </div>
-      <div className="certificate-paper">
-        <div className="grid gap-8 p-9 md:grid-cols-3">
-          <Detail label="Shipment ID" value={shipment.unitId} large />
-          <div />
-          <Detail label="Certificate ID" value={certificate.certificateId} align="right" />
-          <Detail label="Cargo Description" value={shipment.cargo} />
-          <Detail label="Origin" value={shipment.origin} />
-          <Detail label="Destination" value={shipment.destination} />
-          <Detail label="Departure Date/Time" value={shipment.departure} />
-          <Detail label="Arrival Date/Time" value={shipment.arrival} />
-          <Detail label="Transport Duration" value={shipment.duration} />
-        </div>
-        <div className="compliant-band"><CheckCircle2 size={34} /><div><h2>COMPLIANT</h2><p>{shipment.compliance}</p></div></div>
-        <div className="p-9"><h2 className="mb-5 text-2xl font-bold text-[#1a241e]">Timestamped Sensor Log</h2><table className="cert-table"><thead><tr><th>Timestamp (UTC)</th><th>Parameter</th><th>Value</th><th>Sensor ID</th><th>Status</th></tr></thead><tbody>{logs.map((log) => <tr key={log.id}><td>{log.timestamp}</td><td>{log.parameter}</td><td>{log.value}</td><td>{log.sensorId}</td><td><span>{log.status}</span></td></tr>)}</tbody></table></div>
-      </div>
-    </div>
-  );
-}
-
-function Detail({ label, value, large, align }: { label: string; value: string; large?: boolean; align?: "right" }) {
-  return <div className={align === "right" ? "text-right" : ""}><div className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#6f7772]">{label}</div><div className={cx("mt-2 font-mono font-bold text-[#121815]", large && "text-2xl")}>{value}</div></div>;
-}
-
-function AdminPage({ data, setData, auth }: { data: AppData; setData: React.Dispatch<React.SetStateAction<AppData>>; auth: ReturnType<typeof useAuth> }) {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("");
-  const [draft, setDraft] = useState<Shipment>({ unitId: "", cargo: "", origin: "", destination: "", route: "", status: "Monitoring", temp: 2.4, humidity: 65, ethylene: 8, co2: 0.42, eta: "4h", health: 98, departure: "2026-04-20 09:00:00 UTC", arrival: "2026-04-20 13:00:00 UTC", duration: "4h", compliance: "All readings compliant." });
-  const [logDraft, setLogDraft] = useState({ shipmentId: "KRY-2847-PHR", parameter: "Temperature", value: "2.4°C", sensorId: "T1-A847", status: "Compliant" });
-
-  if (!auth.isAdmin) {
-    return <div className="mx-auto max-w-md pt-12"><Panel className="p-8"><div className="mb-6 flex items-center gap-3"><Lock className="text-[#22ff99]" /><div><h1 className="text-2xl font-black text-white">Admin Login</h1><p className="text-sm text-[#8fa597]">Unlock complete read/write access to KRYO data.</p></div></div><form onSubmit={(e) => { e.preventDefault(); auth.login(username, password); }} className="space-y-4"><input className="k-input" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" autoComplete="username" /><input className="k-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" autoComplete="current-password" /><button className="primary-btn w-full" type="submit"><Lock size={16} />Login</button></form><div className="mt-5 rounded-lg border border-[#174a2e] bg-[#07160d] p-3 font-mono text-xs text-[#9bb2a4]">Username: admin<br />Password: kryo2026</div></Panel></div>;
-  }
-
-  const saveShipment = () => {
-    if (!draft.unitId || !draft.cargo) return toast({ title: "Missing data", description: "Unit ID and cargo are required." });
-    setData((current) => ({ ...current, shipments: [...current.shipments.filter((item) => item.unitId !== draft.unitId), draft] }));
-    toast({ title: "Shipment saved", description: `${draft.unitId} is now available across KRYO.` });
-  };
-  const deleteShipment = (unitId: string) => setData((current) => ({ ...current, shipments: current.shipments.filter((item) => item.unitId !== unitId) }));
-  const addLog = () => {
-    const entry: SensorLog = { id: `log-${Date.now()}`, timestamp: new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC", ...logDraft };
-    setData((current) => ({ ...current, sensorLogs: [entry, ...current.sensorLogs] }));
-    toast({ title: "Sensor reading added", description: `${entry.parameter} was recorded for ${entry.shipmentId}.` });
-  };
-  const generateCertificate = () => {
-    const shipmentId = draft.unitId || data.shipments[0].unitId;
-    const cert: Certificate = { id: `cert-${Date.now()}`, shipmentId, certificateId: `CERT-${new Date().toISOString().slice(0, 10)}-${Math.floor(1000 + Math.random() * 8999)}`, issuedAt: new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC", notes: "Mock blockchain verification hash generated" };
-    setData((current) => ({ ...current, certificates: [cert, ...current.certificates.filter((item) => item.shipmentId !== shipmentId)] }));
-    toast({ title: "Certificate generated", description: cert.certificateId });
-  };
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "kryo-data.json";
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-  const simulate = () => setData((current) => ({ ...current, events: [{ id: `evt-${Date.now()}`, time: new Date().toTimeString().slice(0, 5), severity: "safe", message: "Manual live data simulation completed by admin" }, ...current.events] }));
-
-  return (
-    <div>
-      <PageTitle title="Admin Control Panel" subtitle="CRUD shipments, sensor logs, certificates, and live simulation data" action={<div className="admin-badge"><Database size={14} />Writable Data</div>} />
-      <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <Panel className="p-6"><h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white"><PackageCheck className="text-[#22ff99]" />Shipments</h2><div className="grid gap-3 sm:grid-cols-2"><AdminInput label="Unit ID" value={draft.unitId} onChange={(value) => setDraft({ ...draft, unitId: value })} /><AdminInput label="Cargo" value={draft.cargo} onChange={(value) => setDraft({ ...draft, cargo: value })} /><AdminInput label="Origin" value={draft.origin} onChange={(value) => setDraft({ ...draft, origin: value })} /><AdminInput label="Destination" value={draft.destination} onChange={(value) => setDraft({ ...draft, destination: value })} /><AdminInput label="Route" value={draft.route} onChange={(value) => setDraft({ ...draft, route: value })} /><AdminInput label="Status" value={draft.status} onChange={(value) => setDraft({ ...draft, status: value })} /><AdminInput label="Temp" value={String(draft.temp)} onChange={(value) => setDraft({ ...draft, temp: Number(value) })} /><AdminInput label="Humidity" value={String(draft.humidity)} onChange={(value) => setDraft({ ...draft, humidity: Number(value) })} /><AdminInput label="Ethylene" value={String(draft.ethylene)} onChange={(value) => setDraft({ ...draft, ethylene: Number(value) })} /><AdminInput label="CO2" value={String(draft.co2)} onChange={(value) => setDraft({ ...draft, co2: Number(value) })} /></div><div className="mt-5 flex flex-wrap gap-3"><button onClick={saveShipment} className="primary-btn compact"><Save size={15} />Save Shipment</button><button onClick={generateCertificate} className="secondary-btn compact"><ClipboardCheck size={15} />Generate Certificate</button></div></Panel>
-        <Panel className="p-6"><h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white"><Cpu className="text-[#22ff99]" />Manual Sensor Reading</h2><div className="grid gap-3 sm:grid-cols-2"><AdminInput label="Shipment ID" value={logDraft.shipmentId} onChange={(value) => setLogDraft({ ...logDraft, shipmentId: value })} /><AdminInput label="Parameter" value={logDraft.parameter} onChange={(value) => setLogDraft({ ...logDraft, parameter: value })} /><AdminInput label="Value" value={logDraft.value} onChange={(value) => setLogDraft({ ...logDraft, value })} /><AdminInput label="Sensor ID" value={logDraft.sensorId} onChange={(value) => setLogDraft({ ...logDraft, sensorId: value })} /></div><div className="mt-5 flex flex-wrap gap-3"><button onClick={addLog} className="primary-btn compact"><Plus size={15} />Add Reading</button><button onClick={exportJson} className="secondary-btn compact"><Download size={15} />Export JSON</button><button onClick={simulate} className="secondary-btn compact"><Sparkles size={15} />Simulate Live Data</button></div></Panel>
-      </div>
-      <Panel className="mt-6 overflow-hidden p-0"><table className="k-table"><thead><tr><th>Unit ID</th><th>Cargo</th><th>Route</th><th>Status</th><th>Edit</th></tr></thead><tbody>{data.shipments.map((shipment) => <tr key={shipment.unitId}><td className="font-mono text-white">{shipment.unitId}</td><td>{shipment.cargo}</td><td>{shipment.route}</td><td>{shipment.status}</td><td className="space-x-3"><button onClick={() => setDraft(shipment)} className="text-link">Edit</button><button onClick={() => deleteShipment(shipment.unitId)} className="text-link danger"><Trash2 size={13} />Delete</button></td></tr>)}</tbody></table></Panel>
-    </div>
-  );
-}
-
-function AdminInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="block"><span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">{label}</span><input className="k-input" value={value} onChange={(e) => onChange(e.target.value)} /></label>;
-}
-
-function NotFound() {
-  return <div className="py-24 text-center"><h1 className="text-4xl font-black text-white">Route not found</h1><Link href="/" className="text-link mt-4 inline-flex">Return Home</Link></div>;
-}
-
-function Router({ data, setData, auth }: { data: AppData; setData: React.Dispatch<React.SetStateAction<AppData>>; auth: ReturnType<typeof useAuth> }) {
-  return <Switch><Route path="/" component={() => <LandingPage data={data} />} /><Route path="/dashboard" component={() => <DashboardPage data={data} />} /><Route path="/inspect/:id" component={() => <InspectPage data={data} />} /><Route path="/certificate/:id" component={() => <CertificatePage data={data} />} /><Route path="/admin" component={() => <AdminPage data={data} setData={setData} auth={auth} />} /><Route component={NotFound} /></Switch>;
-}
-
+// ─── ROUTER ───────────────────────────────────────────────────────────────────
 function AppContent() {
-  const [data, setData] = usePersistentData();
   const auth = useAuth();
-  const memoData = useMemo(() => data, [data]);
-  useLiveSimulation(memoData, setData);
-  return <AppShell isAdmin={auth.isAdmin} logout={auth.logout}><Router data={memoData} setData={setData} auth={auth} /></AppShell>;
+  return (
+    <AppShell user={auth.user} isAdmin={auth.isAdmin} logout={auth.logout}>
+      <Switch>
+        <Route path="/" component={LandingPage} />
+        <Route path="/signup" component={() => <SignupPage auth={auth} />} />
+        <Route path="/login" component={() => <LoginPage auth={auth} />} />
+        <Route path="/contact" component={ContactPage} />
+        <Route path="/demo" component={DemoPage} />
+        <Route path="/dashboard" component={() => <DashboardPage token={auth.token} />} />
+        <Route path="/admin" component={() => <AdminPage token={auth.token} isAdmin={auth.isAdmin} />} />
+        <Route component={() => (
+          <div className="py-24 text-center">
+            <h1 className="text-4xl font-black text-white">Page not found</h1>
+            <Link href="/" className="text-link mt-4 inline-flex">Return Home</Link>
+          </div>
+        )} />
+      </Switch>
+    </AppShell>
+  );
 }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}><AppContent /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <AppContent />
+        </WouterRouter>
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
 }
 
 export default App;
