@@ -14,7 +14,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 
-const API = "http://localhost:3000/api";
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 const queryClient = new QueryClient();
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
