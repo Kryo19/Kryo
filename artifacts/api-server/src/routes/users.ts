@@ -24,6 +24,32 @@ router.get("/users", requireAdmin, async (_req, res) => {
   }
 });
 
+// Promote user to admin (admin only)
+router.patch("/users/:id/promote", requireAdmin, async (req, res) => {
+  try {
+    const [user] = await db.update(usersTable)
+      .set({ role: "admin" })
+      .where(eq(usersTable.id, Number(req.params.id)))
+      .returning();
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to promote user." });
+  }
+});
+
+// Demote admin to user (admin only)
+router.patch("/users/:id/demote", requireAdmin, async (req, res) => {
+  try {
+    const [user] = await db.update(usersTable)
+      .set({ role: "user" })
+      .where(eq(usersTable.id, Number(req.params.id)))
+      .returning();
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to demote user." });
+  }
+});
+
 // Assign shipment to user (admin only)
 router.post("/users/:userId/shipments", requireAdmin, async (req, res) => {
   try {

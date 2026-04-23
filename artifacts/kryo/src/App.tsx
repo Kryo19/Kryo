@@ -450,8 +450,19 @@ function DemoPage() {
 }
 
 // ─── USER DASHBOARD ───────────────────────────────────────────────────────────
+function StatCard({ icon: Icon, value, unit, label }: { icon: React.ComponentType<{ size?: number; className?: string }>; value: string; unit: string; label: string }) {
+  return <Panel className="stat-card"><Icon size={22} className="text-[#22ff99]" /><div className="mt-6"><span className="text-4xl font-light text-white">{value}</span><span className="ml-3 font-mono text-xs text-[#a2b5a9]">{unit}</span></div><div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#6e8978]">{label}</div></Panel>;
+}
 function DashboardPage({ token }: { token: string | null }) {
   const { shipments, loading } = useShipments(token);
+  const [search, setSearch] = useState("");
+
+  const filtered = shipments.filter(s =>
+    s.unitId.toLowerCase().includes(search.toLowerCase()) ||
+    s.cargo.toLowerCase().includes(search.toLowerCase()) ||
+    s.status.toLowerCase().includes(search.toLowerCase())
+  );
+
   const telemetry = [
     { time: "00:00", temperature: 2.1, humidity: 63, ethylene: 5 },
     { time: "04:00", temperature: 2.3, humidity: 64, ethylene: 6 },
@@ -466,6 +477,7 @@ function DashboardPage({ token }: { token: string | null }) {
   return (
     <div>
       <PageTitle title="My Dashboard" subtitle="Monitor your cold chain shipments in real time" action={<div className="live-monitor"><StatusDot />Live Monitoring</div>} />
+
       {shipments.length === 0 ? (
         <Panel className="p-12 text-center">
           <Box size={48} className="mx-auto text-[#22ff99] opacity-40" />
@@ -475,15 +487,21 @@ function DashboardPage({ token }: { token: string | null }) {
         </Panel>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-4 mb-6">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-4 mb-6">
             <StatCard icon={Box} value={shipments.length.toString()} unit="UNITS" label="Your Shipments" />
             <StatCard icon={Thermometer} value={(shipments.reduce((s, x) => s + x.temp, 0) / shipments.length).toFixed(1)} unit="°C" label="Avg Temperature" />
             <StatCard icon={AlertTriangle} value={shipments.filter(s => s.status === "Alert").length.toString()} unit="ALERTS" label="Active Alerts" />
             <StatCard icon={Activity} value={(shipments.reduce((s, x) => s + x.health, 0) / shipments.length).toFixed(1)} unit="%" label="Fleet Health" />
           </div>
+
           <Panel className="mb-6 p-6">
             <h2 className="mb-4 text-lg font-bold text-white">Telemetry — Last 24 Hours</h2>
-            <ResponsiveContainer width="100%" height={240}>
+            <div className="mb-3 flex gap-4 font-mono text-[11px] text-[#88a293]">
+              <span className="text-[#22ff99]">● Temperature</span>
+              <span className="text-cyan-300">● Humidity</span>
+              <span className="text-orange-400">● Ethylene</span>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
               <LineChart data={telemetry} margin={{ left: -20, right: 15, top: 10, bottom: 0 }}>
                 <CartesianGrid stroke="#103321" strokeDasharray="3 3" />
                 <XAxis dataKey="time" stroke="#63806f" tick={{ fontSize: 11 }} />
@@ -495,46 +513,69 @@ function DashboardPage({ token }: { token: string | null }) {
               </LineChart>
             </ResponsiveContainer>
           </Panel>
+
           <Panel className="overflow-hidden p-0">
-            <div className="border-b border-[#113722] p-6"><h2 className="text-xl font-bold text-white">Your Shipments</h2></div>
-            <div className="overflow-x-auto">
-              <table className="k-table">
-                <thead><tr><th>Unit ID</th><th>Cargo</th><th>Route</th><th>Status</th><th>Temp</th><th>Humidity</th><th>Ethylene</th><th>Shelf Life</th><th>ETA</th><th>Health</th></tr></thead>
-                <tbody>
-                  {shipments.map((s) => (
-                    <tr key={s.id}>
-                      <td className="font-mono text-[#dffff0]">{s.unitId}</td>
-                      <td>{s.cargo}</td>
-                      <td>{s.route}</td>
-                      <td><span className={cx("status-badge", s.status === "Alert" && "alert")}>{s.status}</span></td>
-                      <td className="text-[#22ff99]">{s.temp.toFixed(1)}°C</td>
-                      <td>{s.humidity}%</td>
-                      <td>{s.ethylene} PPM</td>
-                      <td>{s.shelfLifeRemaining}h / {s.shelfLifeTotal}h</td>
-                      <td>{s.eta}</td>
-                      <td><span className="text-[#22ff99]">{s.health}%</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="border-b border-[#113722] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-bold text-white">Your Shipments</h2>
+              <input
+                className="k-input max-w-xs"
+                placeholder="Search by Unit ID, cargo, status..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
+            {filtered.length === 0 ? (
+              <div className="p-12 text-center text-[#8fa597]">No shipments match your search.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="k-table">
+                  <thead>
+                    <tr>
+                      <th>Unit ID</th>
+                      <th>Cargo</th>
+                      <th>Route</th>
+                      <th>Status</th>
+                      <th>Temp</th>
+                      <th>Humidity</th>
+                      <th>Ethylene</th>
+                      <th>Shelf Life</th>
+                      <th>ETA</th>
+                      <th>Health</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((s) => (
+                      <tr key={s.id}>
+                        <td className="font-mono text-[#dffff0]">{s.unitId}</td>
+                        <td>{s.cargo}</td>
+                        <td>{s.route}</td>
+                        <td><span className={cx("status-badge", s.status === "Alert" && "alert")}>{s.status}</span></td>
+                        <td className="text-[#22ff99]">{s.temp.toFixed(1)}°C</td>
+                        <td>{s.humidity}%</td>
+                        <td>{s.ethylene} PPM</td>
+                        <td>{s.shelfLifeRemaining}h / {s.shelfLifeTotal}h</td>
+                        <td>{s.eta}</td>
+                        <td><span className="text-[#22ff99]">{s.health}%</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Panel>
         </>
       )}
     </div>
   );
 }
-
-function StatCard({ icon: Icon, value, unit, label }: { icon: React.ComponentType<{ size?: number; className?: string }>; value: string; unit: string; label: string }) {
-  return <Panel className="stat-card"><Icon size={22} className="text-[#22ff99]" /><div className="mt-6"><span className="text-4xl font-light text-white">{value}</span><span className="ml-3 font-mono text-xs text-[#a2b5a9]">{unit}</span></div><div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#6e8978]">{label}</div></Panel>;
-}
-
 // ─── ADMIN PAGE ───────────────────────────────────────────────────────────────
 function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean }) {
   const [inquiries, setInquiries] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [tab, setTab] = useState<"inquiries" | "users" | "shipments">("inquiries");
+  const [allShipments, setAllShipments] = useState<any[]>([]);
+  const [tab, setTab] = useState<"overview" | "inquiries" | "users" | "shipments">("overview");
   const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
+  const [editingShipment, setEditingShipment] = useState<any | null>(null);
   const [shipmentForm, setShipmentForm] = useState({
     unitId: "", cargo: "", origin: "", destination: "", route: "",
     status: "Monitoring", temp: "2.4", humidity: "65", ethylene: "8",
@@ -544,11 +585,14 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
   });
   const [assignUserId, setAssignUserId] = useState("");
   const [savingShipment, setSavingShipment] = useState(false);
+  const [searchUser, setSearchUser] = useState("");
+  const [searchShipment, setSearchShipment] = useState("");
 
   const loadData = () => {
     if (!token || !isAdmin) return;
     apiFetch("/inquiries", {}, token).then(setInquiries).catch(() => {});
     apiFetch("/users", {}, token).then(setUsers).catch(() => {});
+    apiFetch("/shipments/all", {}, token).then(setAllShipments).catch(() => {});
   };
 
   useEffect(() => { loadData(); }, [token, isAdmin]);
@@ -560,26 +604,71 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
     toast({ title: "Inquiry deleted" });
   };
 
-  const assignShipment = async (e: React.FormEvent) => {
+  const promoteUser = async (id: number) => {
+    await apiFetch(`/users/${id}/promote`, { method: "PATCH" }, token!);
+    setUsers((prev) => prev.map(u => u.id === id ? { ...u, role: "admin" } : u));
+    toast({ title: "User promoted to admin" });
+  };
+
+  const demoteUser = async (id: number) => {
+    await apiFetch(`/users/${id}/demote`, { method: "PATCH" }, token!);
+    setUsers((prev) => prev.map(u => u.id === id ? { ...u, role: "user" } : u));
+    toast({ title: "User demoted to regular user" });
+  };
+
+  const deleteUser = async (id: number) => {
+    await apiFetch(`/users/${id}`, { method: "DELETE" }, token!);
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    toast({ title: "User deleted" });
+  };
+
+  const deleteShipment = async (id: number) => {
+    await apiFetch(`/shipments/${id}`, { method: "DELETE" }, token!);
+    setAllShipments((prev) => prev.filter((s) => s.id !== id));
+    toast({ title: "Shipment deleted" });
+  };
+
+  const saveShipment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assignUserId) return toast({ title: "Select a user first", variant: "destructive" });
+    if (!assignUserId && !editingShipment) return toast({ title: "Select a user first", variant: "destructive" });
     setSavingShipment(true);
     try {
-      await apiFetch(`/users/${assignUserId}/shipments`, {
-        method: "POST",
-        body: JSON.stringify({
-          ...shipmentForm,
-          temp: Number(shipmentForm.temp),
-          humidity: Number(shipmentForm.humidity),
-          ethylene: Number(shipmentForm.ethylene),
-          co2: Number(shipmentForm.co2),
-          health: Number(shipmentForm.health),
-          shelfLifeTotal: Number(shipmentForm.shelfLifeTotal),
-          shelfLifeRemaining: Number(shipmentForm.shelfLifeRemaining),
-        }),
-      }, token!);
-      toast({ title: "Shipment assigned!", description: `${shipmentForm.unitId} assigned to user.` });
+      if (editingShipment) {
+        const updated = await apiFetch(`/shipments/${editingShipment.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            ...shipmentForm,
+            temp: Number(shipmentForm.temp),
+            humidity: Number(shipmentForm.humidity),
+            ethylene: Number(shipmentForm.ethylene),
+            co2: Number(shipmentForm.co2),
+            health: Number(shipmentForm.health),
+            shelfLifeTotal: Number(shipmentForm.shelfLifeTotal),
+            shelfLifeRemaining: Number(shipmentForm.shelfLifeRemaining),
+          }),
+        }, token!);
+        setAllShipments(prev => prev.map(s => s.id === editingShipment.id ? updated : s));
+        setEditingShipment(null);
+        toast({ title: "Shipment updated!" });
+      } else {
+        await apiFetch(`/users/${assignUserId}/shipments`, {
+          method: "POST",
+          body: JSON.stringify({
+            ...shipmentForm,
+            temp: Number(shipmentForm.temp),
+            humidity: Number(shipmentForm.humidity),
+            ethylene: Number(shipmentForm.ethylene),
+            co2: Number(shipmentForm.co2),
+            health: Number(shipmentForm.health),
+            shelfLifeTotal: Number(shipmentForm.shelfLifeTotal),
+            shelfLifeRemaining: Number(shipmentForm.shelfLifeRemaining),
+          }),
+        }, token!);
+        toast({ title: "Shipment assigned!", description: `${shipmentForm.unitId} assigned to user.` });
+        loadData();
+      }
       setShipmentForm({ unitId: "", cargo: "", origin: "", destination: "", route: "", status: "Monitoring", temp: "2.4", humidity: "65", ethylene: "8", co2: "0.42", eta: "4h", health: "98", departure: "", arrival: "", duration: "", compliance: "All readings compliant.", shelfLifeTotal: "336", shelfLifeRemaining: "336" });
+      setAssignUserId("");
     } catch (err: any) {
       toast({ title: "Failed", description: err.message, variant: "destructive" });
     } finally {
@@ -587,10 +676,29 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
     }
   };
 
-  const deleteUser = async (id: number) => {
-    await apiFetch(`/users/${id}`, { method: "DELETE" }, token!);
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    toast({ title: "User deleted" });
+  const startEdit = (shipment: any) => {
+    setEditingShipment(shipment);
+    setShipmentForm({
+      unitId: shipment.unitId,
+      cargo: shipment.cargo,
+      origin: shipment.origin,
+      destination: shipment.destination,
+      route: shipment.route,
+      status: shipment.status,
+      temp: String(shipment.temp),
+      humidity: String(shipment.humidity),
+      ethylene: String(shipment.ethylene),
+      co2: String(shipment.co2),
+      eta: shipment.eta,
+      health: String(shipment.health),
+      departure: shipment.departure,
+      arrival: shipment.arrival,
+      duration: shipment.duration,
+      compliance: shipment.compliance,
+      shelfLifeTotal: String(shipment.shelfLifeTotal),
+      shelfLifeRemaining: String(shipment.shelfLifeRemaining),
+    });
+    setTab("shipments");
   };
 
   if (!isAdmin) return (
@@ -600,21 +708,100 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
     </div>
   );
 
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchUser.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchUser.toLowerCase()) ||
+    u.company.toLowerCase().includes(searchUser.toLowerCase())
+  );
+
+  const filteredShipments = allShipments.filter(s =>
+    s.unitId.toLowerCase().includes(searchShipment.toLowerCase()) ||
+    s.cargo.toLowerCase().includes(searchShipment.toLowerCase())
+  );
+
   return (
     <div>
-      <PageTitle title="Admin Panel" subtitle="Manage users, shipments, inquiries and demo requests" />
-      <div className="mb-6 flex gap-3">
-        <button onClick={() => setTab("inquiries")} className={cx("nav-pill", tab === "inquiries" && "active")}>
-          Inquiries & Demos ({inquiries.length})
-        </button>
-        <button onClick={() => setTab("users")} className={cx("nav-pill", tab === "users" && "active")}>
-          Users ({users.length})
-        </button>
-        <button onClick={() => setTab("shipments")} className={cx("nav-pill", tab === "shipments" && "active")}>
-          Assign Shipment
-        </button>
+      <PageTitle title="Admin Panel" subtitle="Full control over users, shipments, inquiries and analytics" />
+
+      {/* Tab navigation */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        {[
+          { key: "overview", label: `Overview` },
+          { key: "inquiries", label: `Inquiries (${inquiries.length})` },
+          { key: "users", label: `Users (${users.length})` },
+          { key: "shipments", label: `Shipments (${allShipments.length})` },
+        ].map(({ key, label }) => (
+          <button key={key} onClick={() => setTab(key as any)}
+            className={cx("nav-pill", tab === key && "active")}>
+            {label}
+          </button>
+        ))}
       </div>
 
+      {/* OVERVIEW TAB */}
+      {tab === "overview" && (
+        <div className="space-y-6">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+            <StatCard icon={User} value={users.filter(u => u.role === "user").length.toString()} unit="USERS" label="Registered Users" />
+            <StatCard icon={Box} value={allShipments.length.toString()} unit="TOTAL" label="All Shipments" />
+            <StatCard icon={Activity} value={inquiries.filter(i => i.type === "inquiry").length.toString()} unit="MSGS" label="Inquiries" />
+            <StatCard icon={Sparkles} value={inquiries.filter(i => i.type === "demo").length.toString()} unit="REQS" label="Demo Requests" />
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Panel className="p-6">
+              <h2 className="mb-4 text-lg font-bold text-white">Recent Signups</h2>
+              <div className="space-y-3">
+                {users.slice(-5).reverse().map(u => (
+                  <div key={u.id} className="flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-white text-sm">{u.name}</div>
+                      <div className="font-mono text-xs text-[#22ff99]">{u.email}</div>
+                    </div>
+                    <div className="font-mono text-[10px] text-[#8fa597]">{new Date(u.createdAt).toLocaleDateString()}</div>
+                  </div>
+                ))}
+                {users.length === 0 && <div className="text-[#8fa597] text-sm">No users yet.</div>}
+              </div>
+            </Panel>
+            <Panel className="p-6">
+              <h2 className="mb-4 text-lg font-bold text-white">Recent Inquiries</h2>
+              <div className="space-y-3">
+                {inquiries.slice(-5).reverse().map(i => (
+                  <div key={i.id} className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className={cx("status-badge text-[9px]", i.type === "demo" && "alert")}>{i.type}</span>
+                        <span className="font-bold text-white text-sm">{i.name}</span>
+                      </div>
+                      <div className="font-mono text-xs text-[#22ff99]">{i.email}</div>
+                    </div>
+                    <div className="font-mono text-[10px] text-[#8fa597]">{new Date(i.createdAt).toLocaleDateString()}</div>
+                  </div>
+                ))}
+                {inquiries.length === 0 && <div className="text-[#8fa597] text-sm">No inquiries yet.</div>}
+              </div>
+            </Panel>
+          </div>
+          <Panel className="p-6">
+            <h2 className="mb-4 text-lg font-bold text-white">Active Alerts</h2>
+            {allShipments.filter(s => s.status === "Alert").length === 0 ? (
+              <div className="flex items-center gap-2 text-[#22ff99]"><CheckCircle2 size={18} />All shipments are compliant.</div>
+            ) : (
+              <div className="space-y-2">
+                {allShipments.filter(s => s.status === "Alert").map(s => (
+                  <div key={s.id} className="flex items-center justify-between border border-[rgba(255,173,56,0.2)] bg-[rgba(255,173,56,0.05)] p-3">
+                    <div className="font-mono text-sm text-orange-300">{s.unitId}</div>
+                    <div className="text-sm text-[#b7cec1]">{s.cargo}</div>
+                    <button onClick={() => startEdit(s)} className="text-link text-xs">Edit</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+        </div>
+      )}
+
+      {/* INQUIRIES TAB */}
       {tab === "inquiries" && (
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
           <Panel className="overflow-hidden p-0">
@@ -647,7 +834,6 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
               </div>
             )}
           </Panel>
-
           {selectedInquiry && (
             <Panel className="p-6 self-start">
               <div className="flex items-center justify-between mb-4">
@@ -664,7 +850,10 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
                 <div><div className="font-mono text-[10px] uppercase text-[#8aa090] mb-1">Message</div><div className="text-[#b7cec1] text-sm leading-relaxed bg-[rgba(34,255,153,0.03)] border border-[rgba(34,255,153,0.1)] p-3">{selectedInquiry.message}</div></div>
               </div>
               <div className="mt-5 flex gap-3">
-                <a href={`mailto:${selectedInquiry.email}`} className="primary-btn compact flex-1 text-center">Reply via Email</a>
+<div className="flex gap-2 flex-1">
+  <a href={`mailto:${selectedInquiry.email}?subject=Re: Your KRYO ${selectedInquiry.type} request&body=Hi ${selectedInquiry.name},%0D%0A%0D%0AThank you for reaching out to KRYO.%0D%0A%0D%0A`} className="primary-btn compact flex-1 text-center">Reply via Email</a>
+  <button onClick={() => { navigator.clipboard.writeText(selectedInquiry.email); toast({ title: "Email copied!", description: selectedInquiry.email }); }} className="secondary-btn compact">Copy Email</button>
+</div>
                 <button onClick={() => deleteInquiry(selectedInquiry.id)} className="secondary-btn compact text-[#ff6682]">Delete</button>
               </div>
             </Panel>
@@ -672,19 +861,21 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
         </div>
       )}
 
+      {/* USERS TAB */}
       {tab === "users" && (
         <Panel className="overflow-hidden p-0">
-          <div className="border-b border-[#113722] p-5">
+          <div className="border-b border-[#113722] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-bold text-white">Registered Users</h2>
+            <input className="k-input max-w-xs" placeholder="Search users..." value={searchUser} onChange={e => setSearchUser(e.target.value)} />
           </div>
-          {users.length === 0 ? (
-            <div className="p-12 text-center text-[#8fa597]">No users yet.</div>
+          {filteredUsers.length === 0 ? (
+            <div className="p-12 text-center text-[#8fa597]">No users found.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="k-table">
                 <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Phone</th><th>Role</th><th>Joined</th><th>Actions</th></tr></thead>
                 <tbody>
-                  {users.map((u) => (
+                  {filteredUsers.map((u) => (
                     <tr key={u.id}>
                       <td className="text-white font-bold">{u.name}</td>
                       <td className="font-mono text-[#22ff99] text-xs">{u.email}</td>
@@ -692,10 +883,11 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
                       <td>{u.phone}</td>
                       <td><span className={cx("status-badge", u.role === "admin" && "alert")}>{u.role}</span></td>
                       <td className="font-mono text-xs text-[#8fa597]">{new Date(u.createdAt).toLocaleDateString()}</td>
-                      <td>
-                        {u.role !== "admin" && (
-                          <button onClick={() => deleteUser(u.id)} className="text-link danger text-xs">Delete</button>
-                        )}
+                      <td className="space-x-2">
+                        {u.role !== "admin"
+                          ? <button onClick={() => promoteUser(u.id)} className="text-link text-xs">Make Admin</button>
+                          : <button onClick={() => demoteUser(u.id)} className="text-link text-xs">Demote</button>}
+                        <button onClick={() => deleteUser(u.id)} className="text-link danger text-xs">Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -706,20 +898,65 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
         </Panel>
       )}
 
+      {/* SHIPMENTS TAB */}
       {tab === "shipments" && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <Panel className="overflow-hidden p-0">
+            <div className="border-b border-[#113722] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-bold text-white">All Shipments</h2>
+              <input className="k-input max-w-xs" placeholder="Search shipments..." value={searchShipment} onChange={e => setSearchShipment(e.target.value)} />
+            </div>
+            {filteredShipments.length === 0 ? (
+              <div className="p-12 text-center text-[#8fa597]">No shipments yet.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="k-table">
+                  <thead><tr><th>Unit ID</th><th>Cargo</th><th>Route</th><th>Status</th><th>Temp</th><th>Health</th><th>User ID</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    {filteredShipments.map((s) => (
+                      <tr key={s.id}>
+                        <td className="font-mono text-[#dffff0]">{s.unitId}</td>
+                        <td>{s.cargo}</td>
+                        <td>{s.route}</td>
+                        <td><span className={cx("status-badge", s.status === "Alert" && "alert")}>{s.status}</span></td>
+                        <td className="text-[#22ff99]">{s.temp}°C</td>
+                        <td>{s.health}%</td>
+                        <td className="font-mono text-xs text-[#8fa597]">#{s.userId}</td>
+                        <td className="space-x-2">
+                          <button onClick={() => startEdit(s)} className="text-link text-xs">Edit</button>
+                          <button onClick={() => deleteShipment(s.id)} className="text-link danger text-xs">Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+
           <Panel className="p-6">
-            <h2 className="mb-4 text-lg font-bold text-white">Assign Shipment to User</h2>
-            <form onSubmit={assignShipment} className="space-y-3">
-              <label className="block">
-                <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">Assign to User</span>
-                <select className="k-input" value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)}>
-                  <option value="">Select a user...</option>
-                  {users.filter(u => u.role !== "admin").map((u) => (
-                    <option key={u.id} value={u.id}>{u.name} — {u.company}</option>
-                  ))}
-                </select>
-              </label>
+            <h2 className="mb-4 text-lg font-bold text-white">
+              {editingShipment ? `Editing: ${editingShipment.unitId}` : "Assign New Shipment"}
+            </h2>
+            {editingShipment && (
+              <div className="mb-4 flex items-center gap-3 border border-[rgba(255,173,56,0.3)] bg-[rgba(255,173,56,0.05)] p-3">
+                <AlertTriangle size={16} className="text-orange-300" />
+                <span className="text-sm text-orange-300">Editing existing shipment — changes will update immediately</span>
+                <button onClick={() => { setEditingShipment(null); setShipmentForm({ unitId: "", cargo: "", origin: "", destination: "", route: "", status: "Monitoring", temp: "2.4", humidity: "65", ethylene: "8", co2: "0.42", eta: "4h", health: "98", departure: "", arrival: "", duration: "", compliance: "All readings compliant.", shelfLifeTotal: "336", shelfLifeRemaining: "336" }); }} className="ml-auto text-link text-xs">Cancel Edit</button>
+              </div>
+            )}
+            <form onSubmit={saveShipment} className="space-y-3">
+              {!editingShipment && (
+                <label className="block">
+                  <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">Assign to User</span>
+                  <select className="k-input" value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)}>
+                    <option value="">Select a user...</option>
+                    {users.filter(u => u.role !== "admin").map((u) => (
+                      <option key={u.id} value={u.id}>{u.name} — {u.company}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
                   ["Unit ID", "unitId"], ["Cargo", "cargo"], ["Origin", "origin"],
@@ -744,19 +981,9 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
                   onChange={(e) => setShipmentForm({ ...shipmentForm, compliance: e.target.value })} />
               </label>
               <button className="primary-btn w-full" type="submit" disabled={savingShipment}>
-                {savingShipment ? "Assigning..." : "Assign Shipment to User"}
+                {savingShipment ? "Saving..." : editingShipment ? "Update Shipment" : "Assign Shipment to User"}
               </button>
             </form>
-          </Panel>
-          <Panel className="p-6">
-            <h2 className="mb-4 text-lg font-bold text-white">How it works</h2>
-            <div className="space-y-4 text-sm text-[#8fa597]">
-              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">01</span><span>A user signs up for a free trial on the website</span></div>
-              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">02</span><span>They appear in the Users tab above</span></div>
-              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">03</span><span>You fill in their shipment details here and assign it to them</span></div>
-              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">04</span><span>They log in and see their shipments in their dashboard</span></div>
-              <div className="flex gap-3"><span className="text-[#22ff99] font-mono">05</span><span>They can monitor temperature, humidity, ethylene, shelf life and ETA in real time</span></div>
-            </div>
           </Panel>
         </div>
       )}

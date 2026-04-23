@@ -46,4 +46,27 @@ router.post("/shipments", requireAdmin, async (req, res) => {
   }
 });
 
+// Update shipment (admin only)
+router.patch("/shipments/:id", requireAdmin, async (req, res) => {
+  try {
+    const [shipment] = await db.update(shipmentsTable)
+      .set(req.body)
+      .where(eq(shipmentsTable.id, Number(req.params.id)))
+      .returning();
+    res.json(shipment);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update shipment." });
+  }
+});
+
+// Delete shipment (admin only)
+router.delete("/shipments/:id", requireAdmin, async (req, res) => {
+  try {
+    await db.delete(shipmentsTable).where(eq(shipmentsTable.id, Number(req.params.id)));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete shipment." });
+  }
+});
+
 export default router;
