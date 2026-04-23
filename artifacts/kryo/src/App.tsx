@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Activity, AlertTriangle, Box, CheckCircle2, ChevronRight,
   ClipboardCheck, Gauge, Home, LayoutDashboard, Lock, LogOut,
-  RadioTower, ShieldCheck, Sparkles, Thermometer, User, Waves,
+  Menu, RadioTower, ShieldCheck, Sparkles, Thermometer, User, Waves, X,
 } from "lucide-react";
 import {
   Area, AreaChart, CartesianGrid, Line, LineChart,
@@ -133,6 +133,16 @@ function AppShell({ children, user, isAdmin, logout }: {
   children: React.ReactNode; user: User | null; isAdmin: boolean; logout: () => void;
 }) {
   const [location] = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const links = [
+    { href: "/", label: "Home", show: true },
+    { href: "/dashboard", label: "Dashboard", show: !!user },
+    { href: "/contact", label: "Contact", show: true },
+    { href: "/demo", label: "Request Demo", show: true },
+    { href: "/admin", label: "Admin", show: isAdmin },
+  ];
+
   return (
     <div className="k-app min-h-screen text-[#e9fff4]">
       <div className="noise" />
@@ -144,20 +154,44 @@ function AppShell({ children, user, isAdmin, logout }: {
             <div className="h-3 w-px bg-[#1b3f2d]" />
             <div className="font-mono text-[9px] uppercase tracking-[0.38em] text-[#84b899]">Mission Control</div>
           </Link>
+
+          {/* Desktop nav */}
           <nav className="hidden items-center gap-1 md:flex">
-            <Link href="/" className={cx("nav-pill", location === "/" && "active")}><Home size={14} />Home</Link>
-            {user && <Link href="/dashboard" className={cx("nav-pill", location.startsWith("/dashboard") && "active")}><LayoutDashboard size={14} />Dashboard</Link>}
-            <Link href="/contact" className={cx("nav-pill", location === "/contact" && "active")}><RadioTower size={14} />Contact</Link>
-            <Link href="/demo" className={cx("nav-pill", location === "/demo" && "active")}><Sparkles size={14} />Request Demo</Link>
-            {isAdmin && <Link href="/admin" className={cx("nav-pill", location.startsWith("/admin") && "active")}><Lock size={14} />Admin</Link>}
+            {links.filter(l => l.show).map(({ href, label }) => (
+              <Link key={href} href={href} className={cx("nav-pill", (href === "/" ? location === "/" : location.startsWith(href)) && "active")}>
+                {label}
+              </Link>
+            ))}
             {user
               ? <button onClick={logout} className="nav-pill"><LogOut size={14} />Logout</button>
               : <Link href="/login" className={cx("nav-pill", location === "/login" && "active")}><User size={14} />Login</Link>}
           </nav>
-          {user && <div className="admin-badge"><User size={13} />{user.name}</div>}
+
+          {/* Mobile hamburger */}
+          <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden" style={{background:'transparent', border:'1px solid rgba(34,255,153,0.3)', padding:'8px', color:'#22ff99', cursor:'pointer'}}>
+  {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
+
+        {/* Mobile menu */}
+        {menuOpen && (
+          <div className="border-t border-[#123624] bg-[#041009]/95 md:hidden">
+            <div className="flex flex-col px-5 py-4 gap-2">
+              {links.filter(l => l.show).map(({ href, label }) => (
+                <Link key={href} href={href} onClick={() => setMenuOpen(false)}
+                  className={cx("nav-pill w-full justify-center", (href === "/" ? location === "/" : location.startsWith(href)) && "active")}>
+                  {label}
+                </Link>
+              ))}
+              {user
+                ? <button onClick={() => { logout(); setMenuOpen(false); }} className="nav-pill w-full justify-center"><LogOut size={14} />Logout</button>
+                : <Link href="/login" onClick={() => setMenuOpen(false)} className="nav-pill w-full justify-center"><User size={14} />Login</Link>}
+              {user && <div className="mt-2 text-center font-mono text-[10px] text-[#22ff99]">Logged in as {user.name}</div>}
+            </div>
+          </div>
+        )}
       </header>
-      <main className="mx-auto max-w-[1220px] px-5 py-9 md:px-7">{children}</main>
+      <main className="mx-auto max-w-[1220px] px-4 py-6 md:px-7 md:py-9">{children}</main>
     </div>
   );
 }
