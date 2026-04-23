@@ -1,3 +1,4 @@
+import ShipmentMap from "@/components/ShipmentMap";
 import { useEffect, useState } from "react";
 import { Link, Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -513,7 +514,11 @@ function DashboardPage({ token }: { token: string | null }) {
               </LineChart>
             </ResponsiveContainer>
           </Panel>
-
+          <Panel className="mb-6 p-6">
+            <h2 className="mb-4 text-lg font-bold text-white">🗺️ Shipment Routes Map</h2>
+            <p className="text-sm text-[#8fa597] mb-4">Live route tracking across all active shipments.</p>
+            <ShipmentMap shipments={filtered} />
+          </Panel>
           <Panel className="overflow-hidden p-0">
             <div className="border-b border-[#113722] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-bold text-white">Your Shipments</h2>
@@ -782,6 +787,11 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
               </div>
             </Panel>
           </div>
+<Panel className="p-6">
+  <h2 className="mb-4 text-lg font-bold text-white">🗺️ All Shipment Routes</h2>
+  <p className="text-sm text-[#8fa597] mb-4">Live map of all active shipments across the fleet.</p>
+  <ShipmentMap shipments={allShipments} />
+</Panel>
           <Panel className="p-6">
             <h2 className="mb-4 text-lg font-bold text-white">Active Alerts</h2>
             {allShipments.filter(s => s.status === "Alert").length === 0 ? (
