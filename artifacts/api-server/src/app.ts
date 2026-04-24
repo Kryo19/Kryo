@@ -28,6 +28,7 @@ app.use(
 app.use(cors({
   origin: [
     "http://localhost:5173",
+    "http://localhost:5174",
     "https://kryo-kryo.vercel.app",
     /\.vercel\.app$/,
   ],

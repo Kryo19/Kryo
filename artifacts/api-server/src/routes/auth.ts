@@ -24,8 +24,9 @@ router.post("/auth/signup", async (req, res) => {
     }).returning();
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, company: user.company, role: user.role } });
-  } catch (err) {
-    res.status(500).json({ error: "Signup failed." });
+} catch (err: any) {
+    console.error("Signup error:", err.message, err.stack);
+    res.status(500).json({ error: "Signup failed.", detail: err.message });
   }
 });
 
@@ -45,8 +46,9 @@ router.post("/auth/login", async (req, res) => {
     }
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, company: user.company, role: user.role } });
-  } catch (err) {
-    res.status(500).json({ error: "Login failed." });
+} catch (err: any) {
+    console.error("Login error:", err.message, err.stack);
+    res.status(500).json({ error: "Login failed.", detail: err.message });
   }
 });
 

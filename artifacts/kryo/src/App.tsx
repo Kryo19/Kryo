@@ -14,6 +14,9 @@ import {
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
+import CargoLookup from "@/components/CargoLookup";
+import ShipmentDetail from "@/components/ShipmentDetail";
+import InvestorPage from "@/components/InvestorPage";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 const queryClient = new QueryClient();
@@ -136,14 +139,14 @@ function AppShell({ children, user, isAdmin, logout }: {
   const [location] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const links = [
-    { href: "/", label: "Home", show: true },
-    { href: "/dashboard", label: "Dashboard", show: !!user },
-    { href: "/contact", label: "Contact", show: true },
-    { href: "/demo", label: "Request Demo", show: true },
-    { href: "/admin", label: "Admin", show: isAdmin },
-  ];
-
+const links = [
+  { href: "/", label: "Home", show: true },
+  { href: "/dashboard", label: "Dashboard", show: !!user },
+  { href: "/contact", label: "Contact", show: true },
+  { href: "/demo", label: "Request Demo", show: true },
+  { href: "/investors", label: "Investors", show: true },
+  { href: "/admin", label: "Admin", show: isAdmin },
+];
   return (
     <div className="k-app min-h-screen text-[#e9fff4]">
       <div className="noise" />
@@ -457,6 +460,7 @@ function StatCard({ icon: Icon, value, unit, label }: { icon: React.ComponentTyp
 function DashboardPage({ token }: { token: string | null }) {
   const { shipments, loading } = useShipments(token);
   const [search, setSearch] = useState("");
+const [selectedShipment, setSelectedShipment] = useState<any | null>(null);
 
   const filtered = shipments.filter(s =>
     s.unitId.toLowerCase().includes(search.toLowerCase()) ||
@@ -561,7 +565,8 @@ function DashboardPage({ token }: { token: string | null }) {
                         <td>{s.shelfLifeRemaining}h / {s.shelfLifeTotal}h</td>
                         <td>{s.eta}</td>
                         <td><span className="text-[#22ff99]">{s.health}%</span></td>
-                      </tr>
+<td><button onClick={() => setSelectedShipment(s)} className="text-link text-xs">View Details</button></td>                     
+ </tr>
                     ))}
                   </tbody>
                 </table>
@@ -570,7 +575,8 @@ function DashboardPage({ token }: { token: string | null }) {
           </Panel>
         </>
       )}
-    </div>
+{selectedShipment && <ShipmentDetail shipment={selectedShipment} onClose={() => setSelectedShipment(null)} />}   
+ </div>
   );
 }
 // ─── ADMIN PAGE ───────────────────────────────────────────────────────────────
@@ -956,7 +962,25 @@ function AdminPage({ token, isAdmin }: { token: string | null; isAdmin: boolean 
               </div>
             )}
             <form onSubmit={saveShipment} className="space-y-3">
-              {!editingShipment && (
+{!editingShipment && (
+  <div className="mb-4 border border-[rgba(34,255,153,0.15)] p-4">
+    <CargoLookup onDataReady={(data) => {
+      setShipmentForm(prev => ({
+        ...prev,
+        cargo: data.name,
+        temp: String((data.requiredTempMin + data.requiredTempMax) / 2),
+        humidity: String(data.humidity),
+        ethylene: String(data.ethyleneThreshold),
+        co2: String(data.co2Threshold),
+        shelfLifeTotal: String(data.shelfLifeHours),
+        shelfLifeRemaining: String(data.shelfLifeHours),
+        compliance: data.storageNotes,
+      }));
+      toast({ title: "Cargo data loaded!", description: `${data.name} requirements auto-filled.` });
+    }} />
+  </div>
+)}            
+  {!editingShipment && (
                 <label className="block">
                   <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-[#8aa090]">Assign to User</span>
                   <select className="k-input" value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)}>
@@ -1006,6 +1030,7 @@ function AppContent() {
   return (
     <AppShell user={auth.user} isAdmin={auth.isAdmin} logout={auth.logout}>
       <Switch>
+<Route path="/investors" component={InvestorPage} />
         <Route path="/" component={LandingPage} />
         <Route path="/signup" component={() => <SignupPage auth={auth} />} />
         <Route path="/login" component={() => <LoginPage auth={auth} />} />
