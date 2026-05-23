@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import CargoLookup from "@/components/CargoLookup";
 import ShipmentDetail from "@/components/ShipmentDetail";
 import InvestorPage from "@/components/InvestorPage";
+import MissionControl from "@/components/MissionControl";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 const queryClient = new QueryClient();
@@ -461,6 +462,7 @@ function DashboardPage({ token }: { token: string | null }) {
   const { shipments, loading } = useShipments(token);
   const [search, setSearch] = useState("");
 const [selectedShipment, setSelectedShipment] = useState<any | null>(null);
+const [missionControl, setMissionControl] = useState(false);
 
   const filtered = shipments.filter(s =>
     s.unitId.toLowerCase().includes(search.toLowerCase()) ||
@@ -481,8 +483,14 @@ const [selectedShipment, setSelectedShipment] = useState<any | null>(null);
 
   return (
     <div>
-      <PageTitle title="My Dashboard" subtitle="Monitor your cold chain shipments in real time" action={<div className="live-monitor"><StatusDot />Live Monitoring</div>} />
-
+<PageTitle title="My Dashboard" subtitle="Monitor your cold chain shipments in real time" action={
+  <div className="flex gap-3">
+    <button onClick={() => setMissionControl(true)} className="primary-btn compact">
+      🖥️ Mission Control
+    </button>
+    <div className="live-monitor"><StatusDot />Live Monitoring</div>
+  </div>
+} />
       {shipments.length === 0 ? (
         <Panel className="p-12 text-center">
           <Box size={48} className="mx-auto text-[#22ff99] opacity-40" />
@@ -576,6 +584,7 @@ const [selectedShipment, setSelectedShipment] = useState<any | null>(null);
         </>
       )}
 {selectedShipment && <ShipmentDetail shipment={selectedShipment} onClose={() => setSelectedShipment(null)} />}   
+{missionControl && <MissionControl shipments={shipments} onClose={() => setMissionControl(false)} token={token} />}
  </div>
   );
 }
